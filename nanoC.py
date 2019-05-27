@@ -4,7 +4,7 @@ import sys
 class NanoCLexer(Lexer):
 
     tokens = { OPBIN, ID, WHILE, MAIN, IF, NOMBRE, LBRACE, RBRACE, LPAREN, RPAREN,
-               SEMICOLON, COMMA, EQUAL, LT }
+               SEMICOLON, COMMA, EQUAL, LT, RETURN }
     #On veut aussi ajouter les signes suivants : ( ) { } ; , = <
 
     ignore = ' \t\n'
@@ -12,6 +12,7 @@ class NanoCLexer(Lexer):
     OPBIN = r'[\+-]'
     WHILE = r'while'
     IF = r'if'
+    RETURN = r'return'
     MAIN = r'main'
     NOMBRE = r'[0-9]+'
     LBRACE = r'\{'
@@ -33,7 +34,7 @@ class NanoCLexer(Lexer):
         sys.exit(1)
 
 
-programme = '''while x { a = 1; }'''
+programme = '''main(a,b,c){a = c; return a;}'''
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
 
@@ -41,6 +42,11 @@ class NanoCParser(Parser):
 
     tokens = lexer.tokens
     #start = 'varlist'
+    
+    @_('MAIN LPAREN varlist RPAREN LBRACE instr RETURN expr SEMICOLON RBRACE')
+    def prog(self, p):
+        return p
+    
     @_('instr instr')
     def instr(self, p):
         return (p[0], p[1])
