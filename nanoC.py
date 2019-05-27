@@ -33,14 +33,30 @@ class NanoCLexer(Lexer):
         sys.exit(1)
 
 
-programme = '''x, z'''
+programme = '''while x { a = 1; }'''
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
 
 class NanoCParser(Parser):
 
     tokens = lexer.tokens
-
+    #start = 'varlist'
+    @_('instr instr')
+    def instr(self, p):
+        return (p[0], p[1])
+    
+    @_('WHILE expr LBRACE instr RBRACE')
+    def instr(self, p):
+        return ('while', p[1], p[3])
+    
+    @_('ID EQUAL expr SEMICOLON')
+    def instr(self, p):
+        return ('affect', p[0],p[2])
+    
+    @_('IF expr LBRACE instr RBRACE')
+    def instr(self, p):
+        return ('if', p[1], p[3])
+    
     @_('ID')
     def varlist(self, p):
         return (p[0],)
@@ -60,8 +76,13 @@ class NanoCParser(Parser):
     @_('ID')
     def expr(self, p):
         return p
+     
+    
 
 
 parser = NanoCParser()
+for t in lexer.tokenize(programme):
+    print(t)
+    
 x = parser.parse(lexer.tokenize(programme))
 print("x = %s" % str(x))
