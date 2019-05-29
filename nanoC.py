@@ -3,7 +3,7 @@ import sys
 
 class NanoCLexer(Lexer):
 
-    tokens = { OPBIN, ID, WHILE, MAIN, IF, NOMBRE, LBRACE, RBRACE, LPAREN, RPAREN,
+    tokens = { OPBIN, ID, WHILE, MAIN, IF, NUMBER, LBRACE, RBRACE, LPAREN, RPAREN,
                SEMICOLON, COMMA, EQUAL, LTE, LT, GTE, GT, RETURN }
 
     ignore = ' \t\n'
@@ -13,7 +13,7 @@ class NanoCLexer(Lexer):
     IF = r'if'
     RETURN = r'return'
     MAIN = r'main'
-    NOMBRE = r'[0-9]+'
+    NUMBER = r'[0-9]+'
     LBRACE = r'\{'
     RBRACE = r'\}'
     LPAREN = r'\('
@@ -97,7 +97,7 @@ class NanoCParser(Parser):
     def expr(self, p):
         return 'opbin', p[0], p[1], p[2]
 
-    @_('NOMBRE')
+    @_('NUMBER')
     def expr(self, p):
         return 'nb', p[0]
 
