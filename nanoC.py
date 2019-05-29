@@ -51,7 +51,7 @@ class NanoCParser(Parser):
     
     @_('MAIN LPAREN varlist RPAREN LBRACE instr RETURN expr SEMICOLON RBRACE')
     def prog(self, p):
-        return p[2], p[5], p[7]
+        return 'prog', p[2], p[5], p[7]
     
     @_('instr instr')
     def instr(self, p):
