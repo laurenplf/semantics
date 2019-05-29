@@ -37,7 +37,7 @@ class NanoCLexer(Lexer):
 
 
 
-programme = '''main(a,b,c){a = c; while(a < 1){a = a + 1;} return a;}'''
+programme = '''main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
 
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
