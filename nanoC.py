@@ -241,7 +241,7 @@ def p_asm(prg):
         iv = ["mov rbx, [rax+DELTA]", "mov rdi, rbx", "call atoi", "mov [VAR], rax"]
         iv[0] = iv[0].replace("DELTA", str((i+1)*8))
         iv[3] = iv[3].replace("VAR", prg[1][i][1])
-        init_vars += "\n".join(iv)
+        init_vars += "\n"+ "\n".join(iv)
     code = code.replace("[INIT_VARS]", init_vars)
     return code
 
