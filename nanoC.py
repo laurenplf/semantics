@@ -1,6 +1,10 @@
 from sly import Lexer, Parser
 import sys
 
+def declarations(vars):
+    decls = ['%s:\tdq 0' % v for v in vars]
+    return "\n".join(decls)
+    
 class NanoCLexer(Lexer):
 
     tokens = { OPBIN, ID, WHILE, MAIN, IF, NUMBER, LBRACE, RBRACE, LPAREN, RPAREN,
