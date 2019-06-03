@@ -134,6 +134,22 @@ def p_vars(prg):
     vars |= {prg[3][1]}
     return vars
 
+def i_vars(instr):
+    #print(instr)
+    i = instr[0]
+    vars = set()
+    if i == 'while' or i == 'if':
+        vars |= e_vars(instr[1])
+        vars |= i_vars(instr[2])
+    elif i == 'seq':
+        vars |= i_vars(instr[1])
+        vars |= i_vars(instr[2])
+    elif i == 'affect':
+        vars |= {instr[1][1]}
+        vars |= e_vars(instr[2])
+    return vars
+        
+    
 def expr_dump(expr):
     if (expr[0] == 'opbin'):
         return "(" + expr_dump(expr[1]) + " " + expr[2] + " " + expr_dump(expr[3]) + ")"
