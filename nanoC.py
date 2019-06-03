@@ -83,19 +83,19 @@ class NanoCParser(Parser):
 
     @_('expr LTE expr')
     def expr(self, p):
-        return 'lte', p[0], p[2]
+        return 'opbin', p[0], 'lte', p[2]
 
     @_('expr LT expr')
     def expr(self, p):
-        return 'lt', p[0], p[2]
+        return 'opbin', p[0], 'lt', p[2]
 
     @_('expr GTE expr')
     def expr(self, p):
-        return 'gte', p[0], p[2]
+        return 'opbin', p[0], 'gte', p[2]
 
     @_('expr GT expr')
     def expr(self, p):
-        return 'gt', p[0], p[2]
+        return 'opbin', p[0], 'gt', p[2]
 
     @_('expr OPBIN expr')
     def expr(self, p):
@@ -136,11 +136,13 @@ def p_vars(prg):
 
 def e_vars(expr):
     if expr[0] == 'var':
-        return {expr[1]}
+        return { expr[1] }
     if expr[0] == 'nb':
-        return {expr[1]}
+        return set()
     if expr[0] == 'opbin':
         return e_vars(expr[1])|e_vars(expr[3])
+    else:
+        print(expr)
 
 def i_vars(instr):
     #print(instr)
@@ -158,6 +160,8 @@ def i_vars(instr):
     return vars
         
     
+print(p_vars(x))
+
 def expr_dump(expr):
     if (expr[0] == 'opbin'):
         return "(" + expr_dump(expr[1]) + " " + expr[2] + " " + expr_dump(expr[3]) + ")"
