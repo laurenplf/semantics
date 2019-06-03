@@ -159,9 +159,45 @@ def i_vars(instr):
         vars |= {instr[1][1]}
         vars |= e_vars(instr[2])
     return vars
-        
-    
+     
+      
 print(p_vars(x))
+    
+global cpt_cmp
+cpt_cmp = 0
+i_test = {"lt":"jl", "lte":"jle", "gt":"jg", "gte":"jge"}
+
+def e_asm(expr):
+    global cpt_cmp
+    if expr[0] == 'nb':
+        return ["mov rax, " + expr[1]]
+    elif expr[0] == 'var':
+        return ["mov rax, [" + expr[1] + "]"]
+    elif expr[0] == 'opbin':
+        
+        e_fin = "fin_cmp_"+cpt_cmp
+        e_saut = "cmp_"+cpt_cmp
+        cpt_cmp += 1
+        
+        res = e_asm(expr[3])
+        res.append("push rax")
+        res += e_asm(expr[1])
+        res.append("pop rbx")
+        
+        if expr[2] == '+':
+            res.append("add rax, rbx")
+        elif expr[2] == '-':
+            res.append("sub rax, rbx")    
+        else:
+            res.append("cmp rax, rbx")
+            res.append(i_test[expr[2]] + " "+ e_saut)
+            res.append("mov rax, 0")
+            res.append("jmp "+e_fin)
+            res.append(e_saut+": mov rax, 1")
+            res.append(e_fin+":")
+        return res
+    
+  
 
 def expr_dump(expr):
     if (expr[0] == 'opbin'):
