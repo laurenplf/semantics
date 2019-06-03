@@ -55,7 +55,7 @@ class NanoCParser(Parser):
     
     @_('instr instr')
     def instr(self, p):
-        return p[0], p[1]
+        return 'seq', p[0], p[1]
     
     @_('WHILE LPAREN expr RPAREN LBRACE instr RBRACE')
     def instr(self, p):
