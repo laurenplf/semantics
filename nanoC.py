@@ -164,6 +164,8 @@ def i_vars(instr):
 print(p_vars(x))
     
 global cpt_cmp
+global cptinstr
+cptinstr = 0
 cpt_cmp = 0
 i_test = {"lt":"jl", "lte":"jle", "gt":"jg", "gte":"jge"}
 
@@ -196,7 +198,34 @@ def e_asm(expr):
             res.append(e_saut+": mov rax, 1")
             res.append(e_fin+":")
         return res
-    
+ 
+def i_asm(instr):
+    global cptinstr
+    i = instr[0]
+    st = []
+    if i == "affect": # var = instr[1][1], expr = instr[2]
+        st += e_asm(instr[2]) 
+        st.append("mov " + str(instr[1][1]) + ", rax")
+    elif i == 'seq':
+        st += i_asm(instr[1])
+        st += i_asm(instr[2])
+    elif i == 'if':
+        st += e_asm(instr[1])
+        st.append("cmp rax, 0")
+        st.append("jz jzfin" + str(cptinstr))
+        st += i_asm(instr[2])
+        st.append("jzfin" +str(cptinstr)+":")
+        cptinstr += 1
+    elif i == 'while':
+        st.append("debut"+str(cptinstr)+ ":")
+        st += e_asm(instr[1])
+        st.append("cmp rax, 0")
+        st.append("jz jzfin" + str(cptinstr))
+        st += i_asm(instr[2])
+        st.append("jmp debut" + str(cptinstr))
+        st.append("jzfin" +str(cptinstr)+":")        
+        cptinstr += 1   
+    return st   
   
 
 def expr_dump(expr):
