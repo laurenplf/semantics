@@ -121,15 +121,15 @@ class NanoCParser(Parser):
 
 
 parser = NanoCParser()
-for t in lexer.tokenize(programme):
-    print(t)
+#for t in lexer.tokenize(programme):
+    #print(t)
     
 x = parser.parse(lexer.tokenize(programme))
 print("x = %s" % str(x))
 
 def p_vars(prg):
     vars = set([x[1] for x in prg[1]])
-    print(vars)
+    #print(vars)
     vars |= i_vars(prg[2]) # |= = union dans un set
     vars |= {prg[3][1]}
     return vars
@@ -142,7 +142,8 @@ def e_vars(expr):
     if expr[0] == 'opbin':
         return e_vars(expr[1])|e_vars(expr[3])
     else:
-        print(expr)
+        #print(expr)
+        return set()
 
 def i_vars(instr):
     #print(instr)
