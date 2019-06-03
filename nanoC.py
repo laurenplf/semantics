@@ -177,8 +177,8 @@ def e_asm(expr):
         return ["mov rax, [" + expr[1] + "]"]
     elif expr[0] == 'opbin':
         
-        e_fin = "fin_cmp_"+cpt_cmp
-        e_saut = "cmp_"+cpt_cmp
+        e_fin = "fin_cmp_%s" % cpt_cmp
+        e_saut = "cmp_%s" % cpt_cmp
         cpt_cmp += 1
         
         res = e_asm(expr[3])
@@ -194,9 +194,9 @@ def e_asm(expr):
             res.append("cmp rax, rbx")
             res.append(i_test[expr[2]] + " "+ e_saut)
             res.append("mov rax, 0")
-            res.append("jmp "+e_fin)
-            res.append(e_saut+": mov rax, 1")
-            res.append(e_fin+":")
+            res.append("jmp %s" % e_fin)
+            res.append("%s: mov rax, 1" % e_saut)
+            res.append("%s:" % e_fin)
         return res
  
 def i_asm(instr):
@@ -225,8 +225,32 @@ def i_asm(instr):
         st.append("jmp debut" + str(cptinstr))
         st.append("jzfin" +str(cptinstr)+":")        
         cptinstr += 1   
-    return st   
-  
+    return st 
+
+
+def p_asm(prg):
+    code = open("moule.asm").read()
+    code = code.replace("[DECLS_VARS]", declarations(p_vars(prg)))
+    code = code.replace("[CODE]", "\n".join( i_asm(prg[2])))
+    ret = e_asm(prg[3])
+    ret += ["mov rdi, nombre", "mov rsi, rax", "call printf"]
+    code = code.replace("[RETURN]", "\n".join(ret))
+    init_vars = ""
+    N = len(prg[1])
+    for i in range(N):
+        iv = ["mov rbx, [rax+DELTA]", "mov rdi, rbx", "call atoi", "mov [VAR], rax"]
+        iv[0] = iv[0].replace("DELTA", str((i+1)*8))
+        iv[3] = iv[3].replace("VAR", prg[1][i][1])
+        init_vars += "\n".join(iv)
+    code = code.replace("[INIT_VARS]", init_vars)
+    return code
+
+print(p_asm(x))
+        
+    
+    
+     
+     
 
 def expr_dump(expr):
     if (expr[0] == 'opbin'):
