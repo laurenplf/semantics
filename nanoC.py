@@ -205,7 +205,7 @@ def i_asm(instr):
     st = []
     if i == "affect": # var = instr[1][1], expr = instr[2]
         st += e_asm(instr[2]) 
-        st.append("mov " + str(instr[1][1]) + ", rax")
+        st.append("mov [" + str(instr[1][1]) + "], rax")
     elif i == 'seq':
         st += i_asm(instr[1])
         st += i_asm(instr[2])
