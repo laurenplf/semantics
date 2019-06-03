@@ -123,6 +123,13 @@ for t in lexer.tokenize(programme):
 x = parser.parse(lexer.tokenize(programme))
 print("x = %s" % str(x))
 
+def p_vars(prg):
+    vars = set([x[1] for x in prg[1]])
+    print(vars)
+    vars |= i_vars(prg[2]) # |= = union dans un set
+    vars |= {prg[3][1]}
+    return vars
+
 def expr_dump(expr):
     if (expr[0] == 'opbin'):
         return "(" + expr_dump(expr[1]) + " " + expr[2] + " " + expr_dump(expr[3]) + ")"
