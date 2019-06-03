@@ -134,6 +134,14 @@ def p_vars(prg):
     vars |= {prg[3][1]}
     return vars
 
+def e_vars(expr):
+    if expr[0] == 'var':
+        return {expr[1]}
+    if expr[0] == 'nb':
+        return {expr[1]}
+    if expr[0] == 'opbin':
+        return e_vars(expr[1])|e_vars(expr[3])
+
 def i_vars(instr):
     #print(instr)
     i = instr[0]
