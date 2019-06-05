@@ -8,7 +8,7 @@ def declarations(vars):
 class NanoCLexer(Lexer):
 
     tokens = { OPBIN, ID, WHILE, MAIN, IF, NUMBER, LBRACE, RBRACE, LPAREN, RPAREN,
-               SEMICOLON, COMMA, EQUAL, LTE, LT, GTE, GT, RETURN }
+               SEMICOLON, COMMA, EQUAL, LTE, LT, GTE, GT, RETURN, LSB, RSB, INT, LEN }
 
     ignore = ' \t\n'
 
@@ -29,6 +29,10 @@ class NanoCLexer(Lexer):
     LT = r'\<'
     GTE = r'>='
     GT = r'>'
+    LSB = r'\['
+    RSB = r'\]'
+    INT= r'int'
+    LEN= r'len'
 
 
     @_(r'[a-z]+')
@@ -41,7 +45,7 @@ class NanoCLexer(Lexer):
 
 
 
-programme = '''main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
+programme = '''y=t[x];'''
 
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
@@ -51,7 +55,29 @@ class NanoCParser(Parser):
     tokens = lexer.tokens
 
 
-    #start = 'varlist'
+    start = 'instr'
+    
+    @_('NUMBER')
+    def side(self, p):
+        #right-hand side or left-hand side of an affect
+        return 'nb', p[0]    
+    
+    @_('ID')
+    def side(self,p): 
+        return 'var', p[0]
+    
+    @_('ID LSB side RSB')
+    def side(self,p):
+        return ('tableau', p[0] , p[2] )
+    
+    @_('LEN LPAREN ID RPAREN')
+    def expr(self,p):
+        return 'len',p[2]
+    
+    @_('INT ID LSB NUMBER RSB SEMICOLON')
+    def instr(self,p):
+        return 'dec_tableau', p[1], p[3]
+    
     
     @_('MAIN LPAREN varlist RPAREN LBRACE instr RETURN expr SEMICOLON RBRACE')
     def prog(self, p):
@@ -65,9 +91,9 @@ class NanoCParser(Parser):
     def instr(self, p):
         return 'while', p[2], p[5]
     
-    @_('ID EQUAL expr SEMICOLON')
+    @_('side EQUAL side SEMICOLON')
     def instr(self, p):
-        return 'affect', ('var', p[0]), p[2]
+        return 'affect', p[0], p[2]
     
     @_('IF LPAREN expr RPAREN LBRACE instr RBRACE')
     def instr(self, p):
@@ -161,7 +187,7 @@ def i_vars(instr):
     return vars
      
       
-print(p_vars(x))
+#print(p_vars(x))
     
 global cpt_cmp
 global cptinstr
@@ -245,7 +271,7 @@ def p_asm(prg):
     code = code.replace("[INIT_VARS]", init_vars)
     return code
 
-print(p_asm(x))
+#print(p_asm(x))
         
     
     
