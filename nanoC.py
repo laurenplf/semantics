@@ -41,7 +41,22 @@ class NanoCLexer(Lexer):
 
 
 
-programme = '''main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
+programme = '''
+f(d, e){
+    d = d + 1;
+    e = e - d;
+    return e;
+}
+
+g(h, i){
+    i = i + h;
+    return i;
+}
+
+main(a,b,c){
+    c = f(a+b, c);
+    return c;
+}'''
 
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
@@ -52,10 +67,27 @@ class NanoCParser(Parser):
 
 
     #start = 'varlist'
+
+
+    @_('functionlist main')
+    def prog(self, p):
+        return 'prog', p[0], p[1]
     
     @_('MAIN LPAREN varlist RPAREN LBRACE instr RETURN expr SEMICOLON RBRACE')
-    def prog(self, p):
-        return 'prog', p[2], p[5], p[7]
+    def main(self, p):
+        return 'main', p[2], p[5], p[7]
+
+    @_('function LPAREN varlist RPAREN LBRACE instr RETURN expr SEMICOLON RBRACE')
+    def function_def(self, p):
+        return 'function def', p[0], p[2], p[5], p[7]
+
+    @_('function_def functionlist')
+    def functionlist(self, p):
+        return p[0], p[1]
+
+    @_('function_def')
+    def functionlist(self, p):
+        return p[0]
     
     @_('instr instr')
     def instr(self, p):
@@ -72,14 +104,6 @@ class NanoCParser(Parser):
     @_('IF LPAREN expr RPAREN LBRACE instr RBRACE')
     def instr(self, p):
         return 'if', p[2], p[5]
-
-    @_('LPAREN expr RPAREN')
-    def expr(self, p):
-        return p[1]
-
-    @_('LBRACE expr RBRACE')
-    def expr(self, p):
-        return p[1]
 
     @_('expr LTE expr')
     def expr(self, p):
@@ -101,6 +125,22 @@ class NanoCParser(Parser):
     def expr(self, p):
         return 'opbin', p[0], p[1], p[2]
 
+    @_('ID')
+    def exprlist(self, p):
+        return ('var', p[0]),
+
+    @_('ID COMMA exprlist')
+    def exprlist(self, p):
+        return (('var', p[0]),) + p[2]
+
+    @_('expr COMMA exprlist')
+    def exprlist(self, p):
+        return (p[0],) + p[2]
+
+    @_('expr')
+    def exprlist(self, p):
+        return p[0]
+
     @_('NUMBER')
     def expr(self, p):
         return 'nb', p[0]
@@ -110,6 +150,10 @@ class NanoCParser(Parser):
         return 'var', p[0]
 
     @_('ID')
+    def function(self, p):
+        return 'function', p[0]
+
+    @_('ID')
     def varlist(self, p):
         return ('var', p[0]),
 
@@ -117,6 +161,9 @@ class NanoCParser(Parser):
     def varlist(self, p):
         return (('var', p[0]),) + p[2]
 
+    @_('function LPAREN exprlist RPAREN')
+    def expr(self, p):
+        return 'function call', p[0], p[2]
 
 
 
@@ -161,7 +208,7 @@ def i_vars(instr):
     return vars
      
       
-print(p_vars(x))
+#print(p_vars(x))
     
 global cpt_cmp
 global cptinstr
@@ -245,7 +292,7 @@ def p_asm(prg):
     code = code.replace("[INIT_VARS]", init_vars)
     return code
 
-print(p_asm(x))
+#print(p_asm(x))
         
     
     
