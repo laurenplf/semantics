@@ -45,7 +45,7 @@ class NanoCLexer(Lexer):
 
 
 
-programme = '''y=t[x];'''
+programme = ''' int t[2]={1,2};'''
 
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
@@ -56,10 +56,12 @@ class NanoCParser(Parser):
 
 
     start = 'instr'
+
+    
+    #for the left-hand side of an affect
     
     @_('NUMBER')
     def side(self, p):
-        #right-hand side or left-hand side of an affect
         return 'nb', p[0]    
     
     @_('ID')
@@ -68,7 +70,13 @@ class NanoCParser(Parser):
     
     @_('ID LSB side RSB')
     def side(self,p):
-        return ('tableau', p[0] , p[2] )
+        return ('tableau', p[0] , p[2] )    
+
+    
+    @_('ID EQUAL side SEMICOLON')
+    def instr(self, p):
+        return 'affect', p[0], p[2]    
+    
     
     @_('LEN LPAREN ID RPAREN')
     def expr(self,p):
@@ -77,6 +85,10 @@ class NanoCParser(Parser):
     @_('INT ID LSB NUMBER RSB SEMICOLON')
     def instr(self,p):
         return 'dec_tableau', p[1], p[3]
+    
+    @_('INT ID LSB NUMBER RSB EQUAL LBRACE numlist RBRACE SEMICOLON')
+    def instr(self,p):
+        return 'dec_tableau', p[1], p[3], p[7]    
     
     
     @_('MAIN LPAREN varlist RPAREN LBRACE instr RETURN expr SEMICOLON RBRACE')
@@ -91,7 +103,7 @@ class NanoCParser(Parser):
     def instr(self, p):
         return 'while', p[2], p[5]
     
-    @_('side EQUAL side SEMICOLON')
+    @_('side EQUAL expr SEMICOLON')
     def instr(self, p):
         return 'affect', p[0], p[2]
     
@@ -142,6 +154,16 @@ class NanoCParser(Parser):
     @_('ID COMMA varlist')
     def varlist(self, p):
         return (('var', p[0]),) + p[2]
+    
+    @_('NUMBER')
+    def numlist(self, p):
+        return ('nb', p[0]),
+
+    @_('NUMBER COMMA numlist')
+    def numlist(self, p):
+        return (('nb', p[0]),) + p[2]
+    
+    
 
 
 
@@ -182,8 +204,16 @@ def i_vars(instr):
         vars |= i_vars(instr[1])
         vars |= i_vars(instr[2])
     elif i == 'affect':
-        vars |= {instr[1][1]}
-        vars |= e_vars(instr[2])
+        if instr[1][0] == 'tableau':
+            vars |= i_vars(instr[1][3])
+        else: 
+            vars |= {instr[1][1]}
+        if instr[2][0]=='tableau':
+            vars |= i_vars(instr[2][3])
+        else:
+            vars |= e_vars(instr[2])
+    elif i== 'dec_tableau':
+        vars |= {instr[1]}
     return vars
      
       
@@ -191,8 +221,10 @@ def i_vars(instr):
     
 global cpt_cmp
 global cptinstr
+global ctp_tab
 cptinstr = 0
 cpt_cmp = 0
+cpt_tab = 0
 i_test = {"lt":"jl", "lte":"jle", "gt":"jg", "gte":"jge"}
 
 def e_asm(expr):
@@ -224,6 +256,9 @@ def e_asm(expr):
             res.append("%s: mov rax, 1" % e_saut)
             res.append("%s:" % e_fin)
         return res
+    #elif expr[0]=='len':
+     #   return res 
+        
  
 def i_asm(instr):
     global cptinstr
@@ -250,7 +285,10 @@ def i_asm(instr):
         st += i_asm(instr[2])
         st.append("jmp debut" + str(cptinstr))
         st.append("jzfin" +str(cptinstr)+":")        
-        cptinstr += 1   
+        cptinstr += 1  
+    elif i == 'dec_tableau':
+        st.append(str(instr[1][1])+":")
+        
     return st 
 
 
