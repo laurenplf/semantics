@@ -8,7 +8,7 @@ def declarations(vars):
 class NanoCLexer(Lexer):
 
     tokens = { OPBIN, ID, WHILE, MAIN, IF, NUMBER, LBRACE, RBRACE, LPAREN, RPAREN,
-               SEMICOLON, COMMA, EQUAL, LTE, LT, GTE, GT, RETURN }
+               SEMICOLON, COMMA, EQUAL, LTE, LT, GTE, GT, RETURN, AST, ESP, P}
 
     ignore = ' \t\n'
 
@@ -29,6 +29,9 @@ class NanoCLexer(Lexer):
     LT = r'\<'
     GTE = r'>='
     GT = r'>'
+    AST = r'\*'
+    ESP= r'&'
+    P = r'[pq]'
 
 
     @_(r'[a-z]+')
@@ -41,8 +44,7 @@ class NanoCLexer(Lexer):
 
 
 
-programme = '''main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
-
+programme = '''main(a,b,c){a = wa + 1; return a;}'''
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
 
@@ -72,7 +74,11 @@ class NanoCParser(Parser):
     @_('IF LPAREN expr RPAREN LBRACE instr RBRACE')
     def instr(self, p):
         return 'if', p[2], p[5]
-
+    """
+    @_('AST ID EQUAL expr SEMICOLON')
+    def expr(self,p):
+        return p
+    """
     @_('LPAREN expr RPAREN')
     def expr(self, p):
         return p[1]
@@ -104,6 +110,10 @@ class NanoCParser(Parser):
     @_('NUMBER')
     def expr(self, p):
         return 'nb', p[0]
+    
+    @_('P ID')
+    def expr(self, p):
+        return 'point', p[0]+p[1]
 
     @_('ID')
     def expr(self, p):
@@ -161,7 +171,7 @@ def i_vars(instr):
     return vars
      
       
-print(p_vars(x))
+#print(p_vars(x))
     
 global cpt_cmp
 global cptinstr
@@ -245,7 +255,7 @@ def p_asm(prg):
     code = code.replace("[INIT_VARS]", init_vars)
     return code
 
-print(p_asm(x))
+#print(p_asm(x))
         
     
     
@@ -269,4 +279,3 @@ def expr_dump(expr):
         return expr[1]
     return 'pb'
 
-#print(expr_dump(x))
