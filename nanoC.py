@@ -4,11 +4,11 @@ import sys
 def declarations(vars):
     decls = ['%s:\tdq 0' % v for v in vars]
     return "\n".join(decls)
-
+    
 class NanoCLexer(Lexer):
 
     tokens = { OPBIN, ID, WHILE, MAIN, IF, NUMBER, LBRACE, RBRACE, LPAREN, RPAREN,
-               SEMICOLON, COMMA, EQUAL, LTE, LT, GTE, GT, RETURN, INT, FLOAT }
+               SEMICOLON, COMMA, EQUAL, LTE, LT, GTE, GT, RETURN }
 
     ignore = ' \t\n'
 
@@ -29,8 +29,6 @@ class NanoCLexer(Lexer):
     LT = r'\<'
     GTE = r'>='
     GT = r'>'
-    INT = r'int'
-    FLOAT = r'float'
 
 
     @_(r'[a-z]+')
@@ -43,17 +41,7 @@ class NanoCLexer(Lexer):
 
 
 
-programme1 = '''main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
-programme = '''
-main(int a,float b, int c){
-    a = c;
-    while(a < 1){
-        a = a + 1;
-        b = b - 1;
-    }
-    return a;
-}
-'''
+programme = '''main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
 
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
@@ -64,31 +52,23 @@ class NanoCParser(Parser):
 
 
     #start = 'varlist'
-
+    
     @_('MAIN LPAREN varlist RPAREN LBRACE instr RETURN expr SEMICOLON RBRACE')
     def prog(self, p):
         return 'prog', p[2], p[5], p[7]
-
+    
     @_('instr instr')
     def instr(self, p):
         return 'seq', p[0], p[1]
-
+    
     @_('WHILE LPAREN expr RPAREN LBRACE instr RBRACE')
     def instr(self, p):
         return 'while', p[2], p[5]
-
-    @_('INT ID SEMICOLON')
-    def instr(self, p):
-        return 'define', ('var', p[1],'int')
-
-    @_('FLOAT ID SEMICOLON')
-    def instr(self, p):
-        return 'define', ('var', p[1],'float')
-
+    
     @_('ID EQUAL expr SEMICOLON')
     def instr(self, p):
         return 'affect', ('var', p[0]), p[2]
-
+    
     @_('IF LPAREN expr RPAREN LBRACE instr RBRACE')
     def instr(self, p):
         return 'if', p[2], p[5]
@@ -129,23 +109,13 @@ class NanoCParser(Parser):
     def expr(self, p):
         return 'var', p[0]
 
-    @_('INT ID')
+    @_('ID')
     def varlist(self, p):
-        return ('var', p[1],'int'),
+        return ('var', p[0]),
 
-    @_('FLOAT ID')
+    @_('ID COMMA varlist')
     def varlist(self, p):
-        return ('var', p[1],'float'),
-
-    @_('INT ID COMMA varlist')
-    def varlist(self, p):
-        return (('var', p[1],'int'),) + p[3]
-
-    @_('FLOAT ID COMMA varlist')
-    def varlist(self, p):
-        return (('var', p[1],'float'),) + p[3]
-
-
+        return (('var', p[0]),) + p[2]
 
 
 
@@ -153,12 +123,9 @@ class NanoCParser(Parser):
 parser = NanoCParser()
 #for t in lexer.tokenize(programme):
     #print(t)
-
+    
 x = parser.parse(lexer.tokenize(programme))
-#print("x = %s" % str(x))
-
-for k in x[2]:
-    print(k)
+print("x = %s" % str(x))
 
 def p_vars(prg):
     vars = set([x[1] for x in prg[1]])
@@ -192,10 +159,10 @@ def i_vars(instr):
         vars |= {instr[1][1]}
         vars |= e_vars(instr[2])
     return vars
-
-
-
-
+     
+      
+print(p_vars(x))
+    
 global cpt_cmp
 global cptinstr
 cptinstr = 0
@@ -209,20 +176,20 @@ def e_asm(expr):
     elif expr[0] == 'var':
         return ["mov rax, [" + expr[1] + "]"]
     elif expr[0] == 'opbin':
-
+        
         e_fin = "fin_cmp_%s" % cpt_cmp
         e_saut = "cmp_%s" % cpt_cmp
         cpt_cmp += 1
-
+        
         res = e_asm(expr[3])
         res.append("push rax")
         res += e_asm(expr[1])
         res.append("pop rbx")
-
+        
         if expr[2] == '+':
             res.append("add rax, rbx")
         elif expr[2] == '-':
-            res.append("sub rax, rbx")
+            res.append("sub rax, rbx")    
         else:
             res.append("cmp rax, rbx")
             res.append(i_test[expr[2]] + " "+ e_saut)
@@ -231,16 +198,14 @@ def e_asm(expr):
             res.append("%s: mov rax, 1" % e_saut)
             res.append("%s:" % e_fin)
         return res
-
+ 
 def i_asm(instr):
     global cptinstr
     i = instr[0]
     st = []
     if i == "affect": # var = instr[1][1], expr = instr[2]
-        st += e_asm(instr[2])
+        st += e_asm(instr[2]) 
         st.append("mov [" + str(instr[1][1]) + "], rax")
-    elif i == "declare":
-        st.append("")
     elif i == 'seq':
         st += i_asm(instr[1])
         st += i_asm(instr[2])
@@ -258,9 +223,9 @@ def i_asm(instr):
         st.append("jz jzfin" + str(cptinstr))
         st += i_asm(instr[2])
         st.append("jmp debut" + str(cptinstr))
-        st.append("jzfin" +str(cptinstr)+":")
-        cptinstr += 1
-    return st
+        st.append("jzfin" +str(cptinstr)+":")        
+        cptinstr += 1   
+    return st 
 
 
 def p_asm(prg):
@@ -280,7 +245,12 @@ def p_asm(prg):
     code = code.replace("[INIT_VARS]", init_vars)
     return code
 
-#print(p_asm(x))
+print(p_asm(x))
+        
+    
+    
+     
+     
 
 def expr_dump(expr):
     if (expr[0] == 'opbin'):
@@ -299,4 +269,4 @@ def expr_dump(expr):
         return expr[1]
     return 'pb'
 
-#print(expr_dump(x[2][2][1]))
+#print(expr_dump(x))
