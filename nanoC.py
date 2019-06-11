@@ -32,7 +32,6 @@ class NanoCLexer(Lexer):
     INT = r'int'
     FLOAT = r'float'
 
-
     @_(r'[a-z]+')
     def ID(self, t):
         return t
@@ -41,33 +40,20 @@ class NanoCLexer(Lexer):
         print("error at %s" % t)
         sys.exit(1)
 
-
-
-programme1 = '''main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
-programme = '''
-main(int a,float b, int c){
-    a = c;
-    while(a < 1){
-        a = a + 1;
-        b = b - 1;
-    }
-    return a;
-}
-'''
-
 lexer = NanoCLexer()
-toks = lexer.tokenize(programme)
 
 class NanoCParser(Parser):
 
     tokens = lexer.tokens
-
-
     #start = 'varlist'
 
     @_('MAIN LPAREN varlist RPAREN LBRACE instr RETURN expr SEMICOLON RBRACE')
     def prog(self, p):
         return 'prog', p[2], p[5], p[7]
+
+    @_('MAIN LPAREN varlist RPAREN LBRACE RETURN expr SEMICOLON RBRACE')
+    def prog(self, p):
+        return 'prog', p[2],' ', p[6]
 
     @_('instr instr')
     def instr(self, p):
@@ -145,21 +131,6 @@ class NanoCParser(Parser):
     def varlist(self, p):
         return (('var', p[1],'float'),) + p[3]
 
-
-
-
-
-
-parser = NanoCParser()
-#for t in lexer.tokenize(programme):
-    #print(t)
-
-x = parser.parse(lexer.tokenize(programme))
-#print("x = %s" % str(x))
-
-for k in x[2]:
-    print(k)
-
 def p_vars(prg):
     vars = set([x[1] for x in prg[1]])
     #print(vars)
@@ -193,9 +164,6 @@ def i_vars(instr):
         vars |= e_vars(instr[2])
     return vars
 
-
-
-
 global cpt_cmp
 global cptinstr
 cptinstr = 0
@@ -228,8 +196,8 @@ def e_asm(expr):
             res.append(i_test[expr[2]] + " "+ e_saut)
             res.append("mov rax, 0")
             res.append("jmp %s" % e_fin)
-            res.append("%s: mov rax, 1" % e_saut)
-            res.append("%s:" % e_fin)
+            res.append("\n%s:\n\tmov rax, 1" % e_saut)
+            res.append("\n%s:" % e_fin)
         return res
 
 def i_asm(instr):
@@ -249,38 +217,64 @@ def i_asm(instr):
         st.append("cmp rax, 0")
         st.append("jz jzfin" + str(cptinstr))
         st += i_asm(instr[2])
-        st.append("jzfin" +str(cptinstr)+":")
+        st.append("\njzfin" +str(cptinstr)+":")
         cptinstr += 1
     elif i == 'while':
-        st.append("debut"+str(cptinstr)+ ":")
+        st.append("\ndebut"+str(cptinstr)+ ":")
         st += e_asm(instr[1])
         st.append("cmp rax, 0")
         st.append("jz jzfin" + str(cptinstr))
         st += i_asm(instr[2])
         st.append("jmp debut" + str(cptinstr))
-        st.append("jzfin" +str(cptinstr)+":")
+        st.append("\njzfin" +str(cptinstr)+":")
         cptinstr += 1
     return st
-
 
 def p_asm(prg):
     code = open("moule.asm").read()
     code = code.replace("[DECLS_VARS]", declarations(p_vars(prg)))
-    code = code.replace("[CODE]", "\n".join( i_asm(prg[2])))
+    code = code.replace("[CODE]", "\n\t".join( i_asm(prg[2])))
     ret = e_asm(prg[3])
-    ret += ["mov rdi, nombre", "mov rsi, rax", "call printf"]
-    code = code.replace("[RETURN]", "\n".join(ret))
+    ret += ["mov rdi, nombre", "mov rsi, rax", "call printf",] + e_asm(prg[3])
+    code = code.replace("[RETURN]", "\n\t".join(ret))
     init_vars = ""
     N = len(prg[1])
     for i in range(N):
         iv = ["mov rax, [argv]", "mov rbx, [rax+DELTA]", "mov rdi, rbx", "call atoi", "mov [VAR], rax"]
         iv[1] = iv[1].replace("DELTA", str((i+1)*8))
         iv[4] = iv[4].replace("VAR", prg[1][i][1])
-        init_vars += "\n"+ "\n".join(iv)
+        init_vars += "\n\t"+ "\n\t".join(iv)
     code = code.replace("[INIT_VARS]", init_vars)
     return code
 
-#print(p_asm(x))
+
+programme1 = '''main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
+programme = '''
+main(int a){
+
+    return a;
+}
+'''
+
+toks = lexer.tokenize(programme)
+parser = NanoCParser()
+#for t in lexer.tokenize(programme):
+    #print(t)
+
+x = parser.parse(lexer.tokenize(programme))
+#print("x = %s" % str(x))
+#
+for k in x:
+    print(k)
+
+
+
+#print(x)
+chaine = p_asm(x)
+f = open("result.asm", "w")
+f.write(chaine)
+f.close()
+print(e_asm(x[3]))
 
 def expr_dump(expr):
     if (expr[0] == 'opbin'):
