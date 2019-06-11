@@ -248,7 +248,16 @@ def p_asm(prg):
     return code
 
 
-programme1 = '''main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
+programme1 = '''
+main(a,b,c){
+    a = c;
+    while(a < 1){
+        a = a + 1;
+        b = b - 1;
+    }
+    return a;
+}'''
+
 programme = '''
 main(int a){
 
