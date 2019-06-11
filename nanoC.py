@@ -48,7 +48,7 @@ class NanoCLexer(Lexer):
 #programme = '''struct{int a;}s;main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
 #programme = '''struct{int a;struct point p;}s;struct{int x; int y;}point;main(a,b,c){a = c; return a;}'''
 #programme = '''main(a,b,c){a = c; return a;}'''
-programme = '''struct{int x; int y;}point;main(a,b,c){point.x = 5; return a;}'''
+programme = '''struct{int x; int y;}point;main(a,b,c){point.x = 5; a = 3; return a;}'''
 print(programme)
 
 lexer = NanoCLexer()
@@ -71,27 +71,27 @@ class NanoCParser(Parser):
     
     @_('STRUCT LBRACE attr RBRACE ID SEMICOLON')
     def struct(self, p):
-        return ('struct',p[2],p[4]),
+        return ('struct',p[2],p[4])
     
     @_('STRUCT LBRACE attr RBRACE ID SEMICOLON struct')
     def struct(self, p):
-        return (('struct',p[2],p[4]),) + p[6]
+        return ('struct',p[2],p[4]) + p[6]
     
     @_('INT ID SEMICOLON')
     def attr(self, p):
-        return ('int',p[1]),
+        return ('int',p[1])
     
     @_('STRUCT ID ID SEMICOLON')
     def attr(self, p):
-        return ('struct', p[1], p[2]),
+        return ('struct', p[1], p[2])
 
     @_('INT ID SEMICOLON attr')
     def attr(self, p):
-        return (('int', p[1]),) + p[3]
+        return ('int', p[1]) + p[3]
     
     @_('STRUCT ID ID SEMICOLON attr')
     def attr(self, p):
-        return (('struct', p[1],p[2]),) + p[4]
+        return ('struct', p[1],p[2]) + p[4]
 
 
     
@@ -104,17 +104,17 @@ class NanoCParser(Parser):
     def instr(self, p):
         return 'while', p[2], p[5]
     
-    @_('ID EQUAL expr SEMICOLON')
+#    @_('ID EQUAL expr SEMICOLON')
+#    def instr(self, p):
+#        return 'affect', ('var', p[0]), p[2]    
+    
+    @_('lhs EQUAL expr SEMICOLON')
     def instr(self, p):
-        return 'affect', ('var', p[0]), p[2]    
+        return 'affect', p[0], p[2]
     
     @_('IF LPAREN expr RPAREN LBRACE instr RBRACE')
     def instr(self, p):
         return 'if', p[2], p[5]
-    
-    @_('lhs EQUAL expr SEMICOLON')
-    def instr(self, p):
-        return 'affect struct', p[0], p[2]
 
     @_('LPAREN expr RPAREN')
     def expr(self, p):
@@ -155,20 +155,20 @@ class NanoCParser(Parser):
     
     @_('ID')
     def lhs(self, p):
-        return p[0]
+        return 'var',p[0]
     
     @_('ID DOT lhs')
     def lhs(self, p):
-        return p[0], p[2]
+        return 'struct',p[0], p[2]
     
 
     @_('ID')
     def varlist(self, p):
-        return ('var', p[0]),
+        return ('var', p[0])
 
     @_('ID COMMA varlist')
     def varlist(self, p):
-        return (('var', p[0]),) + p[2]
+        return ('var', p[0]) + p[2]
 
 
 
@@ -178,7 +178,9 @@ parser = NanoCParser()
     #print(t)
     
 x = parser.parse(lexer.tokenize(programme))
-print("x = %s" % str(x))
+print("x = %s \n" % str(x))
+print(x[1])
+print("\n")
 
 def p_vars(prg):
     vars = set([x[1] for x in prg[1]])
