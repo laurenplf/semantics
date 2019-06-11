@@ -278,7 +278,7 @@ for k in x:
 
 
 
-#print(x)
+print(x)
 chaine = p_asm(x)
 f = open("result.asm", "w")
 f.write(chaine)
