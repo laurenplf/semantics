@@ -8,7 +8,7 @@ def declarations(vars):
 class NanoCLexer(Lexer):
 
     tokens = { OPBIN, ID, WHILE, MAIN, IF, NUMBER, LBRACE, RBRACE, LPAREN, RPAREN,
-               SEMICOLON, COMMA, EQUAL, LTE, LT, GTE, GT, RETURN, AST, ESP, P}
+               SEMICOLON, COMMA, EQUAL, LTE, LT, GTE, GT, RETURN, AST, ESP, P, MALLOC}
 
     ignore = ' \t\n'
 
@@ -29,9 +29,11 @@ class NanoCLexer(Lexer):
     LT = r'\<'
     GTE = r'>='
     GT = r'>'
-    AST = r'\*'
+    AST = r'\*+'
     ESP= r'&'
     P = r'[pq]'
+    MALLOC = r'malloc'
+    
 
 
     @_(r'[a-z]+')
@@ -44,7 +46,8 @@ class NanoCLexer(Lexer):
 
 
 
-programme = '''main(a,b,c){a = wa + 1; return a;}'''
+programme = '''main(a,b,c){**p = 1; return a;}'''
+
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
 
@@ -58,7 +61,19 @@ class NanoCParser(Parser):
     @_('MAIN LPAREN varlist RPAREN LBRACE instr RETURN expr SEMICOLON RBRACE')
     def prog(self, p):
         return 'prog', p[2], p[5], p[7]
+      
+    @_('AST point EQUAL expr SEMICOLON')
+    def instr(self, p):
+        return 'point_affect', p[0], p[1], p[3]
     
+    @_('point EQUAL MALLOC LPAREN expr RPAREN SEMICOLON')
+    def instr(self, p):
+        return 'malloc', p[0], p[4]
+    
+    @_('point EQUAL ESP expr SEMICOLON')
+    def instr(self, p):
+        return 'adress_affect', (p[0]), p[3]
+     
     @_('instr instr')
     def instr(self, p):
         return 'seq', p[0], p[1]
@@ -74,11 +89,15 @@ class NanoCParser(Parser):
     @_('IF LPAREN expr RPAREN LBRACE instr RBRACE')
     def instr(self, p):
         return 'if', p[2], p[5]
-    """
-    @_('AST ID EQUAL expr SEMICOLON')
-    def expr(self,p):
-        return p
-    """
+    
+    @_('P ID')
+    def point(self,p):
+        return 'point', p[0]+p[1]  
+    
+    @_('P')
+    def point(self,p):
+        return 'point', p[0]
+    
     @_('LPAREN expr RPAREN')
     def expr(self, p):
         return p[1]
@@ -110,10 +129,6 @@ class NanoCParser(Parser):
     @_('NUMBER')
     def expr(self, p):
         return 'nb', p[0]
-    
-    @_('P ID')
-    def expr(self, p):
-        return 'point', p[0]+p[1]
 
     @_('ID')
     def expr(self, p):
@@ -138,6 +153,7 @@ x = parser.parse(lexer.tokenize(programme))
 print("x = %s" % str(x))
 
 def p_vars(prg):
+    print(prg)
     vars = set([x[1] for x in prg[1]])
     #print(vars)
     vars |= i_vars(prg[2]) # |= = union dans un set
@@ -165,13 +181,19 @@ def i_vars(instr):
     elif i == 'seq':
         vars |= i_vars(instr[1])
         vars |= i_vars(instr[2])
-    elif i == 'affect':
+    elif i == 'affect' or i=='malloc':
         vars |= {instr[1][1]}
         vars |= e_vars(instr[2])
+    elif i == 'adress_affect':
+        vars |= {instr[1][1]}
+        vars |= {instr[2][1]} 
+    elif i=='point_affect':
+        vars |= {instr[2][1]}
+        vars |= e_vars(instr[3][1])      
     return vars
      
       
-#print(p_vars(x))
+print(p_vars(x))
     
 global cpt_cmp
 global cptinstr
@@ -216,6 +238,19 @@ def i_asm(instr):
     if i == "affect": # var = instr[1][1], expr = instr[2]
         st += e_asm(instr[2]) 
         st.append("mov [" + str(instr[1][1]) + "], rax")
+    elif i == 'adress_affect':
+        st.append("lea rax, ["+str(instr[2][1])+"]")
+        st.append("mov QWORD PTR ["+ str(instr[1][1]) +"], rax")
+    elif i == 'point_affect':
+        st += e_asm(instr[3])
+        for k in range(len(instr[1])):
+            st.append("mov rax, QWORD PTR [rax]")
+        st.append("mov DWORD PTR [" + str(instr[2][1]) + "], rax")
+    elif i == 'malloc':
+        st += e_asm(instr[2])
+        st.append("mov edi, rcx")
+        st.append("call malloc")
+        st.append("mov DWORD PTR [" + str(instr[1][1]) + "], rax")
     elif i == 'seq':
         st += i_asm(instr[1])
         st += i_asm(instr[2])
@@ -279,3 +314,4 @@ def expr_dump(expr):
         return expr[1]
     return 'pb'
 
+#print(expr_dump(x))
