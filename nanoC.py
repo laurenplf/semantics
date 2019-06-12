@@ -47,8 +47,9 @@ class NanoCLexer(Lexer):
 
 #programme = '''struct{int a;}s;main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
 #programme = '''struct{int a;struct point p;}s;struct{int x; int y;}point;main(a,b,c){a = c; return a;}'''
-#programme = '''struct{int x; int y;}point;main(a,b,c){point_a.x = point_b.y; a = 3; return a;}'''
-programme = '''struct{int a;struct point point_p;int b}s;struct{int x; int y;}point;main(a,b,c){s_test.point_p.x = 5; a = 3; return a;}'''
+programme = '''struct{int x; int y;}point;main(a,b,c){point_a.x = point_b.y; a = 3; return a;}'''
+#programme = '''struct{int a;struct point point_p;int b}s;struct{int x; int y;}point;main(a,b,c){s_test.point_p.x = 5; a = 3; return a;}'''
+#programme = '''main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
 print(programme+"\n")
 
 lexer = NanoCLexer()
@@ -112,7 +113,7 @@ class NanoCParser(Parser):
 #    def instr(self, p):
 #        return 'affect', p[0], p[2]
     
-    @_('lhs EQUAL rhs SEMICOLON')
+    @_('lhs EQUAL lhs SEMICOLON')
     def instr(self, p):
         return 'affect', p[0], p[2]    
     
@@ -168,19 +169,19 @@ class NanoCParser(Parser):
 
     @_('lhs DOT lhs')
     def lhs(self, p):
-        return p[0], p[2]    
+        return 'dot',p[0], p[2]    
     
     @_('expr')
     def lhs(self, p):
         return p[0]
     
-    @_('rhs DOT rhs')
-    def rhs(self, p):
-        return p[0], p[2]
+#    @_('rhs DOT rhs')
+#    def rhs(self, p):
+#        return p[0], p[2]
 
-    @_('expr')
-    def rhs(self, p):
-        return p[0]
+#    @_('expr')
+#    def rhs(self, p):
+#        return p[0]
     
 
     @_('ID')
@@ -200,9 +201,10 @@ parser = NanoCParser()
     
 x = parser.parse(lexer.tokenize(programme))
 print("x = %s \n" % str(x))
-print(x[1][1])
-print("\n")
+#print(x[1])
 
+
+## fonctions sur les structures
 def create_dict_struct(s):
     d = {}
     for i in range(len(s)):
@@ -211,10 +213,8 @@ def create_dict_struct(s):
     return d
 
 d_struct = create_dict_struct(x[1][1])
-#global d_struct
 
 # par exemple, s = ('int', 'x', 'int', 'y')
-"""
 def taille_struct(s):
     l = d_struct[s]
     cpt = 0
@@ -227,9 +227,8 @@ def taille_struct(s):
             cpt += taille_struct(l[i+1])
             i += 3
     return cpt
-"""
 
-def position(s, b):
+def position_dans_struct(s, b):
     l = d_struct[s]
     cpt = 0
     i = 0
@@ -245,31 +244,49 @@ def position(s, b):
                 return cpt
             else:
                 #cpt += taille_struct(l[i+1])
-                cpt += position(l[i+1], b)
+                cpt += position_dans_struct(l[i+1], b)
                 i += 3
     return cpt
             
-print(position('point', 'x'))
+def decl_struct(d):
+    for s in d:
+        decls = ['%s:\tdq 0' % v for v in vars]
+    return "\n".join(decls)
+
+#print(position_dans_struct('point', 'x'))
+#print(taille_struct('point'))
 
 #s = "abcd"
 #for (indice,k1) in enumerate(s):
 #    print(indice,k1)
 
 
+
+##recherche des variables du programme
 def p_vars(prg):
-    vars = set([x[1] for x in prg[1]])
+    #print(prg)
+    #print(prg[1])
+    vars = set()
+    for i in range(len(prg[1])):
+        if prg[1][i] == 'var':
+            vars |= {prg[1][i+1]}
+    #vars = set([x[1] for x in prg[1]])
     #print(vars)
     vars |= i_vars(prg[2]) # |= = union dans un set
     vars |= {prg[3][1]}
     return vars
 
 def e_vars(expr):
+    #print(expr[0])
     if expr[0] == 'var':
         return { expr[1] }
     if expr[0] == 'nb':
         return set()
     if expr[0] == 'opbin':
         return e_vars(expr[1])|e_vars(expr[3])
+    #if expr[0] == 'struct':
+        #print(expr[1])
+        #return { expr[1]+'_'+expr[2] }
     else:
         #print(expr)
         return set()
@@ -285,13 +302,31 @@ def i_vars(instr):
         vars |= i_vars(instr[1])
         vars |= i_vars(instr[2])
     elif i == 'affect':
-        vars |= {instr[1][1]}
-        vars |= e_vars(instr[2])
+        #print(instr)
+        vars |= lhs_vars(instr[1])
+        vars |= lhs_vars(instr[2])
+        #vars |= {instr[1][1]}
+        #vars |= e_vars(instr[2])
     return vars
      
+def lhs_vars(lhs):
+    #print(lhs[0])
+    if lhs[0] == 'dot':
+        return lhs_vars(lhs[1]) | lhs_vars(lhs[2])
+        #return lhs_vars(lhs[1])
+    if lhs[0] == 'struct':
+        return { lhs[1]+'_'+lhs[2] }
+    else:
+        return set() 
+    
+
+    
+    #return set()
       
 #print(p_vars(x))
     
+
+## Compilation de chaque element
 global cpt_cmp
 global cptinstr
 cptinstr = 0
@@ -357,9 +392,11 @@ def i_asm(instr):
     return st 
 
 
+## Compilation d'un programme (une fois qu'il a été parsé)
 def p_asm(prg):
     code = open("moule.asm").read()
-    code = code.replace("[DECLS_VARS]", declarations(p_vars(prg)))
+    #code = code.replace("[DECLS_STRUCT]", declarations(p_vars(prg)))
+    code = code.replace("[DECLS_VARS]", declarations(p_vars(prg[2])))
     code = code.replace("[CODE]", "\n".join( i_asm(prg[2])))
     ret = e_asm(prg[3])
     ret += ["mov rdi, nombre", "mov rsi, rax", "call printf"]
@@ -376,8 +413,8 @@ def p_asm(prg):
 
 #print(p_asm(x))
         
-    
-    
+#print(p_vars(x[2]))
+print(declarations(p_vars(x[2])))
      
      
 
