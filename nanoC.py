@@ -34,7 +34,7 @@ class NanoCLexer(Lexer):
     STRUCT = r'struct'
     INT = r'int'
 
-    @_(r'[a-z]+')
+    @_(r'[a-z_]+')
     def ID(self, t):
         return t
 
@@ -47,9 +47,9 @@ class NanoCLexer(Lexer):
 
 #programme = '''struct{int a;}s;main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
 #programme = '''struct{int a;struct point p;}s;struct{int x; int y;}point;main(a,b,c){a = c; return a;}'''
-#programme = '''main(a,b,c){a = c; return a;}'''
-programme = '''struct{int x; int y;}point;main(a,b,c){point.x = 5; a = 3; return a;}'''
-print(programme)
+#programme = '''struct{int x; int y;}point;main(a,b,c){point_a.x = point_b.y; a = 3; return a;}'''
+programme = '''struct{int a;struct point point_p;int b}s;struct{int x; int y;}point;main(a,b,c){s_test.point_p.x = 5; a = 3; return a;}'''
+print(programme+"\n")
 
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
@@ -108,9 +108,13 @@ class NanoCParser(Parser):
 #    def instr(self, p):
 #        return 'affect', ('var', p[0]), p[2]    
     
-    @_('lhs EQUAL expr SEMICOLON')
+#    @_('lhs EQUAL expr SEMICOLON')
+#    def instr(self, p):
+#        return 'affect', p[0], p[2]
+    
+    @_('lhs EQUAL rhs SEMICOLON')
     def instr(self, p):
-        return 'affect', p[0], p[2]
+        return 'affect', p[0], p[2]    
     
     @_('IF LPAREN expr RPAREN LBRACE instr RBRACE')
     def instr(self, p):
@@ -148,18 +152,35 @@ class NanoCParser(Parser):
     def expr(self, p):
         return 'nb', p[0]
 
+#    @_('ID')
+#   def expr(self, p):
+#        return 'var', p[0]
     @_('ID')
     def expr(self, p):
-        return 'var', p[0]
-    
-    
-    @_('ID')
+        if "_" in p[0]:
+            for i in range(len(p[0])):
+                if p[0][i] == "_":
+                    indice = i
+            return 'struct', p[0][:indice],p[0][indice+1:]
+        else:
+            return 'var',p[0]
+
+
+    @_('lhs DOT lhs')
     def lhs(self, p):
-        return 'var',p[0]
+        return p[0], p[2]    
     
-    @_('ID DOT lhs')
+    @_('expr')
     def lhs(self, p):
-        return 'struct',p[0], p[2]
+        return p[0]
+    
+    @_('rhs DOT rhs')
+    def rhs(self, p):
+        return p[0], p[2]
+
+    @_('expr')
+    def rhs(self, p):
+        return p[0]
     
 
     @_('ID')
@@ -179,8 +200,61 @@ parser = NanoCParser()
     
 x = parser.parse(lexer.tokenize(programme))
 print("x = %s \n" % str(x))
-print(x[1])
+print(x[1][1])
 print("\n")
+
+def create_dict_struct(s):
+    d = {}
+    for i in range(len(s)):
+        if s[i] == 'struct':
+            d[s[i+2]] = s[i+1]
+    return d
+
+d_struct = create_dict_struct(x[1][1])
+#global d_struct
+
+# par exemple, s = ('int', 'x', 'int', 'y')
+"""
+def taille_struct(s):
+    l = d_struct[s]
+    cpt = 0
+    i = 0
+    while i < len(l):
+        if l[i] == 'int':
+            cpt += 8
+            i += 2
+        elif l[i] == 'struct':
+            cpt += taille_struct(l[i+1])
+            i += 3
+    return cpt
+"""
+
+def position(s, b):
+    l = d_struct[s]
+    cpt = 0
+    i = 0
+    while i < len(l):
+        if l[i] == 'int':
+            if l[i+1] == b:
+                return cpt
+            else:
+                cpt += 8
+                i += 2
+        elif l[i] == 'struct':
+            if l[i+2] == b:
+                return cpt
+            else:
+                #cpt += taille_struct(l[i+1])
+                cpt += position(l[i+1], b)
+                i += 3
+    return cpt
+            
+print(position('point', 'x'))
+
+#s = "abcd"
+#for (indice,k1) in enumerate(s):
+#    print(indice,k1)
+
 
 def p_vars(prg):
     vars = set([x[1] for x in prg[1]])
