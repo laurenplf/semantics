@@ -1,4 +1,5 @@
 extern printf, atoi
+extern malloc
 section .data
 hello : db "Hello world",10,0
 nombre: db "%d", 10,0
