@@ -45,7 +45,8 @@ programme = '''
 f(d, e){
     d = d + 1;
     e = e - d;
-    return e;
+    g = e;
+    return g;
 }
 
 g(h, i){
@@ -55,7 +56,8 @@ g(h, i){
 
 main(a,b,c){
     c = f(a+b, c);
-    return c;
+    d = c + a;
+    return d;
 }'''
 
 lexer = NanoCLexer()
@@ -172,14 +174,45 @@ parser = NanoCParser()
     #print(t)
     
 x = parser.parse(lexer.tokenize(programme))
-print("x = %s" % str(x))
+print("x = %s\n" % str(x))
+for elem in x:
+    print(elem)
+print("\n")
+
+
+
+def fun_args(function_def):
+    """
+    Prend en arg un tuple dont le premier élément est 'function def'
+    Renvoie la liste des arguments de la fonction
+    """
+    return [elem[1] for elem in function_def[2]]
+
+def fun_vars(function_def):
+    """
+    Prend en arg un tuple dont le premier élément est 'function def'
+    Renvoie l'ensemble des variables (autres que les arguments) utilisées dans la fonction
+    """
+    args = set(fun_args(function_def))
+    vars = i_vars(function_def[3])
+    vars |= {function_def[4][1]}
+    vars_copy = vars.copy()
+    for elem in vars_copy:
+        if elem in args:
+            vars.remove(elem)
+    return vars
 
 def p_vars(prg):
-    vars = set([x[1] for x in prg[1]])
+    """
+    Prend en arg un tuple dont le premier élément est 'prog'
+    Renvoie l'ensemble des variables utilisées dans le main
+    """
+    vars = set([x[1] for x in prg[2][1]])
     #print(vars)
-    vars |= i_vars(prg[2]) # |= = union dans un set
-    vars |= {prg[3][1]}
+    vars |= i_vars(prg[2][2]) # |= = union dans un set
+    vars |= {prg[2][3][1]}
     return vars
+
 
 def e_vars(expr):
     if expr[0] == 'var':
@@ -206,9 +239,29 @@ def i_vars(instr):
         vars |= {instr[1][1]}
         vars |= e_vars(instr[2])
     return vars
-     
+
+def delta(function_def):
+    """
+    Prend en arg un tuple dont le premier élément est 'function def'
+    Renvoie un dictionnaire associant à chaque variable (argument ou variable déclarée dans la fonction) son
+    décalage d'adresse par rapport à rbp (en 64 bits)
+    """
+    args = fun_args(function_def)
+    vars = fun_vars(function_def)
+    result = {}
+    for i in range(len(args)):
+        result[args[i]] = 8*(i+2) #le premier décalage est de 16 octets
+    cpt = 1
+    for elem in vars:
+        result[elem] = -8*cpt #le premier décalage est de -8 octets
+        cpt += 1
+    return result
       
-#print(p_vars(x))
+print(p_vars(x))
+print("\n")
+print("f : args = %s\n" %str(fun_args(x[1][0])))
+print("f : vars = %s\n" %str(fun_vars(x[1][0])))
+print("f : delta = %s\n" %str(delta(x[1][0])))
     
 global cpt_cmp
 global cptinstr
