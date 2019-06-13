@@ -2,7 +2,16 @@ from sly import Lexer, Parser
 import sys
 
 def declarations(vars):
-    decls = ['%s:\tdq 0' % v for v in vars]
+    decls=[]
+    for v in vars:
+        if len(v)==2:
+            zeros = "0"+((int(v[1]) - 1)*",0")
+            decls=decls+[v[0]+':\tdq '+zeros]
+            #for i in range (1,int(v[1])):
+             #   decls=decls + [',0']
+            decls = decls+['%s_len:\tdq 10' % v[0]]
+        else:
+            decls = decls+['%s:\tdq 0' % v]
     return "\n".join(decls)
     
 class NanoCLexer(Lexer):
@@ -45,7 +54,8 @@ class NanoCLexer(Lexer):
 
 
 
-programme = ''' int t[2]={1,2};'''
+programme = '''main(a){int l[6]={1,2,3,4,5,6};l[2]=5; return a;}'''
+#main(a){int l[6]={1,2,3,4,5,6};l[2]=5; return a;}
 
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
@@ -55,32 +65,19 @@ class NanoCParser(Parser):
     tokens = lexer.tokens
 
 
-    start = 'instr'
+    #start = 'instr'
 
-    
-    #for the left-hand side of an affect
-    
-    @_('NUMBER')
-    def side(self, p):
-        return 'nb', p[0]    
-    
-    @_('ID')
-    def side(self,p): 
-        return 'var', p[0]
-    
-    @_('ID LSB side RSB')
-    def side(self,p):
-        return ('tableau', p[0] , p[2] )    
 
-    
-    @_('ID EQUAL side SEMICOLON')
+    @_('MAIN LPAREN varlist RPAREN LBRACE instr RETURN expr SEMICOLON RBRACE')
+    def prog(self, p):
+        return 'prog', p[2], p[5], p[7]
+
+
+ 
+    @_('ID EQUAL expr SEMICOLON')
     def instr(self, p):
-        return 'affect', p[0], p[2]    
-    
-    
-    @_('LEN LPAREN ID RPAREN')
-    def expr(self,p):
-        return 'len',p[2]
+        return 'affect', p[0], p[2]        
+         
     
     @_('INT ID LSB NUMBER RSB SEMICOLON')
     def instr(self,p):
@@ -90,11 +87,6 @@ class NanoCParser(Parser):
     def instr(self,p):
         return 'dec_tableau', p[1], p[3], p[7]    
     
-    
-    @_('MAIN LPAREN varlist RPAREN LBRACE instr RETURN expr SEMICOLON RBRACE')
-    def prog(self, p):
-        return 'prog', p[2], p[5], p[7]
-    
     @_('instr instr')
     def instr(self, p):
         return 'seq', p[0], p[1]
@@ -103,7 +95,7 @@ class NanoCParser(Parser):
     def instr(self, p):
         return 'while', p[2], p[5]
     
-    @_('side EQUAL expr SEMICOLON')
+    @_('expr EQUAL expr SEMICOLON')
     def instr(self, p):
         return 'affect', p[0], p[2]
     
@@ -111,6 +103,18 @@ class NanoCParser(Parser):
     def instr(self, p):
         return 'if', p[2], p[5]
 
+
+
+    @_('LEN LPAREN ID RPAREN')
+    def expr(self,p):
+        return 'len',p[2]
+    
+    
+    @_('ID LSB expr RSB')
+    def expr(self,p):
+        return ('tableau', p[0] , p[2] )   
+    
+    
     @_('LPAREN expr RPAREN')
     def expr(self, p):
         return p[1]
@@ -145,8 +149,13 @@ class NanoCParser(Parser):
 
     @_('ID')
     def expr(self, p):
-        return 'var', p[0]
+        return 'var', p[0]    
+    
+    
+   
 
+    
+    
     @_('ID')
     def varlist(self, p):
         return ('var', p[0]),
@@ -154,6 +163,8 @@ class NanoCParser(Parser):
     @_('ID COMMA varlist')
     def varlist(self, p):
         return (('var', p[0]),) + p[2]
+    
+    
     
     @_('NUMBER')
     def numlist(self, p):
@@ -205,15 +216,15 @@ def i_vars(instr):
         vars |= i_vars(instr[2])
     elif i == 'affect':
         if instr[1][0] == 'tableau':
-            vars |= i_vars(instr[1][3])
+            vars |= e_vars(instr[1][2])
         else: 
-            vars |= {instr[1][1]}
+            vars |= {instr[1]}
         if instr[2][0]=='tableau':
-            vars |= i_vars(instr[2][3])
+            vars |= e_vars(instr[2][2])
         else:
             vars |= e_vars(instr[2])
     elif i== 'dec_tableau':
-        vars |= {instr[1]}
+        vars |= {(instr[1],instr[2])}
     return vars
      
       
@@ -256,17 +267,30 @@ def e_asm(expr):
             res.append("%s: mov rax, 1" % e_saut)
             res.append("%s:" % e_fin)
         return res
-    #elif expr[0]=='len':
-     #   return res 
+    elif expr[0]=='len':
+        return ["mov rax, [" + str(expr[1]) + "_len]"]
+    elif expr[0]=='tableau':
+        res=e_asm(expr[2])
+        res.append("mov rbx,"+str(expr[1]))
+        res.append("imul rax,8") #on est en 64 bit
+        res.append("add rbx,rax")
+        res.append("push rbx")
+        return res
         
  
 def i_asm(instr):
     global cptinstr
     i = instr[0]
     st = []
-    if i == "affect": # var = instr[1][1], expr = instr[2]
-        st += e_asm(instr[2]) 
-        st.append("mov [" + str(instr[1][1]) + "], rax")
+    if i == "affect": # var = instr[1][1], expr = instr[2] 
+        if i[1][0]=='tableau':
+            st += e_asm(i[1])
+            st += e_asm(i[2])
+            st.append("pop rbx")
+            st.append("mov [rbx], rax")
+        else:
+            st += e_asm(instr[2]) 
+            st.append("mov [" + str(instr[1][1]) + "], rax")
     elif i == 'seq':
         st += i_asm(instr[1])
         st += i_asm(instr[2])
@@ -287,8 +311,11 @@ def i_asm(instr):
         st.append("jzfin" +str(cptinstr)+":")        
         cptinstr += 1  
     elif i == 'dec_tableau':
-        st.append(str(instr[1][1])+":")
-        
+        st.append("mov " + instr[1] + "_len, instr[2]")
+        if len(i)==3: 
+            st.append(str(instr[1][1])+":")
+            for j in range (0,len(instr[3])):
+                st.append(".long "+ str(instr[3][j][1]))
     return st 
 
 
@@ -309,7 +336,7 @@ def p_asm(prg):
     code = code.replace("[INIT_VARS]", init_vars)
     return code
 
-#print(p_asm(x))
+print(p_asm(x))
         
     
     
