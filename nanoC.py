@@ -2,8 +2,17 @@ from sly import Lexer, Parser
 import sys
 
 def declarations(vars):
-    decls = ['%s:\tdq 0' % v for v in vars]
-    return "\n".join(decls)
+    decls = ""
+    for v in vars:
+        if "_" in v:
+            for i in range(len(v)):
+                if v[i] == "_":
+                    indice = i
+            zero = "0"+(( int( (taille_struct(v[:indice])/8) - 1))*",0")
+            decls = decls+(v+":\tTAB dq "+zero+"\n")
+        else:
+            decls = decls + (v+":\tdq 0\n")
+    return decls            
     
 class NanoCLexer(Lexer):
 
@@ -46,9 +55,9 @@ class NanoCLexer(Lexer):
 
 
 #programme = '''struct{int a;}s;main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
-#programme = '''struct{int a;struct point p;}s;struct{int x; int y;}point;main(a,b,c){a = c; return a;}'''
-programme = '''struct{int x; int y;}point;main(a,b,c){point_a.x = point_b.y; a = 3; return a;}'''
-#programme = '''struct{int a;struct point point_p;int b}s;struct{int x; int y;}point;main(a,b,c){s_test.point_p.x = 5; a = 3; return a;}'''
+#programme = '''struct{int a;struct point point_p;}s;struct{int x; int y;}point;main(a,b,c){a = c; return a;}'''
+#programme = '''struct{int x; int y;}point;main(a,b,c){point_a.x = point_b.y; a = 3; return a;}'''
+programme = '''struct{int a;struct point point_p;int b;}s;struct{int x; int y;}point;main(a,b,c){s_test.point_p.x = 5; a = 3; return a;}'''
 #programme = '''main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
 print(programme+"\n")
 
