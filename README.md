@@ -3,11 +3,12 @@
 ## Syntaxe des pointeurs
 
 Toute variable qui commence par la lettre p ou la lettre q est un pointeur (p et q eux-mêmes compris)
+&i désigne l'adresse de la variable i
+\*p désigne la valeur sur laquelle pointe p
 
 ## Opérations supportées sur les pointeurs
 
 On peut réaliser les opérations suivantes avec les pointeurs:
-
 
 ### Allocation de mémoire à un pointeur
 p = malloc(expr) fait pointer p sur une case mémoire où expr correspond au nombre d'octets à allouer
