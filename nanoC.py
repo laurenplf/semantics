@@ -250,10 +250,10 @@ def delta(function_def):
     vars = fun_vars(function_def)
     result = {}
     for i in range(len(args)):
-        result[args[i]] = 8*(i+2) #le premier décalage est de 16 octets
+        result[args[i]] = "+" + str(8*(i+2)) #le premier décalage est de 16 octets
     cpt = 1
     for elem in vars:
-        result[elem] = -8*cpt #le premier décalage est de -8 octets
+        result[elem] = str(-8*cpt) #le premier décalage est de -8 octets
         cpt += 1
     return result
       
@@ -300,7 +300,7 @@ def e_asm(expr):
     elif expr[0] == 'function call':
         res = []
         for i in range(len(expr[2])):
-            res.append(e_asm(expr[2][-(i+1)]))
+            res += e_asm(expr[2][-(i+1)])
             res.append("push rax")
         res.append("call %s" %expr[1][1])
         return res
@@ -336,6 +336,7 @@ def i_asm(instr):
 
 def p_asm(prg):
     code = open("moule.asm").read()
+    code = code.replace("[FUN_DECL]", "\n".join(fun_asm(prg)))
     code = code.replace("[DECLS_VARS]", declarations(p_vars(prg)))
     code = code.replace("[CODE]", "\n".join(i_asm(prg[2][2])))
     ret = e_asm(prg[2][3])
@@ -344,7 +345,7 @@ def p_asm(prg):
     init_vars = ""
     N = len(prg[2][1]) #nombre d'arguments
     for i in range(N):
-        iv = ["mov rax, [argv]", "mov rbx, [rax+DELTA]", "mov rdi, rbx", "call atoi", "mov [VAR], rax"]
+        iv = ["mov rax, [argv]", "mov rbx, [rbp+DELTA]", "mov rdi, rbx", "call atoi", "mov [VAR], rax"]
         iv[1] = iv[1].replace("DELTA", str((i+1)*8))
         iv[4] = iv[4].replace("VAR", prg[2][1][i][1])
         init_vars += "\n"+ "\n".join(iv)
@@ -357,7 +358,7 @@ def e_asm_fun(expr, delta_function):
     if expr[0] == 'nb':
         return ["mov rax, " + expr[1]]
     elif expr[0] == 'var':
-        return ["mov rax, [" + delta_function[expr[1]] + "]"]
+        return ["mov rax, [rbp " + str(delta_function[expr[1]]) + "]"]
     elif expr[0] == 'opbin':
 
         e_fin = "fin_cmp_%s" % cpt_cmp
@@ -389,7 +390,7 @@ def i_asm_fun(instr, delta_function):
     st = []
     if i == "affect":  # var = instr[1][1], expr = instr[2]
         st += e_asm_fun(instr[2], delta_function)
-        st.append("mov [" + delta_function[instr[1][1]] + "], rax")
+        st.append("mov [rbp " + str(delta_function[instr[1][1]]) + "], rax")
     elif i == 'seq':
         st += i_asm_fun(instr[1], delta_function)
         st += i_asm_fun(instr[2], delta_function)
@@ -412,24 +413,23 @@ def i_asm_fun(instr, delta_function):
     return st
 
 def fun_asm(prg):
-    code = open("moule.asm").read()
-    fun_decl_asm = ""
+    fun_decl_asm = []
     for fun_def in prg[1]:
         delta_fun = delta(fun_def)
-        fun_decl_asm += fun_def[1][1] + ": pop rbp\n"
-        fun_decl_asm += "mov rbp, rsp\n"
+        fun_decl_asm.append(fun_def[1][1] + ": pop rbp")
+        fun_decl_asm.append("mov rbp, rsp")
         nb_var_loc = len(fun_vars(fun_def))
-        fun_decl_asm += "sub rsp, " + str(nb_var_loc) + "\n"
-        for elem in i_asm_fun(fun_def[3]):
-            fun_decl_asm += elem
-            fun_decl_asm += "\n"
+        fun_decl_asm.append("sub rsp, " + str(8*nb_var_loc))
+        fun_decl_asm += i_asm_fun(fun_def[3], delta_fun)
 
-        fun_decl_asm += "mov rsp, rbp\n"
-        fun_decl_asm += "pop rbp\n"
-        fun_decl_asm += "ret\n"
+        fun_decl_asm.append("mov rsp, rbp")
+        fun_decl_asm.append("pop rbp")
+        fun_decl_asm.append("ret")
 
+    return fun_decl_asm
 
-#print(p_asm(x))
+print(fun_asm(x))
+print(p_asm(x))
         
     
     
