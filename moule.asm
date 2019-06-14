@@ -9,6 +9,7 @@ argv:	dq 0
 	
 global main
 section .text
+[FUN_DECL]
 main :
 	push rbp
 	mov [argc], rdi 
@@ -18,3 +19,4 @@ main :
         [RETURN]
 	pop rbp
 	ret
+

@@ -257,8 +257,7 @@ def delta(function_def):
         cpt += 1
     return result
       
-print(p_vars(x))
-print("\n")
+print("main : all vars = %s\n" %str(p_vars(x)))
 print("f : args = %s\n" %str(fun_args(x[1][0])))
 print("f : vars = %s\n" %str(fun_vars(x[1][0])))
 print("f : delta = %s\n" %str(delta(x[1][0])))
@@ -298,6 +297,13 @@ def e_asm(expr):
             res.append("%s: mov rax, 1" % e_saut)
             res.append("%s:" % e_fin)
         return res
+    elif expr[0] == 'function call':
+        res = []
+        for i in range(len(expr[2])):
+            res.append(e_asm(expr[2][-(i+1)]))
+            res.append("push rax")
+        res.append("call %s" %expr[1][1])
+        return res
  
 def i_asm(instr):
     global cptinstr
@@ -331,19 +337,97 @@ def i_asm(instr):
 def p_asm(prg):
     code = open("moule.asm").read()
     code = code.replace("[DECLS_VARS]", declarations(p_vars(prg)))
-    code = code.replace("[CODE]", "\n".join( i_asm(prg[2])))
-    ret = e_asm(prg[3])
+    code = code.replace("[CODE]", "\n".join(i_asm(prg[2][2])))
+    ret = e_asm(prg[2][3])
     ret += ["mov rdi, nombre", "mov rsi, rax", "call printf"]
     code = code.replace("[RETURN]", "\n".join(ret))
     init_vars = ""
-    N = len(prg[1])
+    N = len(prg[2][1]) #nombre d'arguments
     for i in range(N):
         iv = ["mov rax, [argv]", "mov rbx, [rax+DELTA]", "mov rdi, rbx", "call atoi", "mov [VAR], rax"]
         iv[1] = iv[1].replace("DELTA", str((i+1)*8))
-        iv[4] = iv[4].replace("VAR", prg[1][i][1])
+        iv[4] = iv[4].replace("VAR", prg[2][1][i][1])
         init_vars += "\n"+ "\n".join(iv)
     code = code.replace("[INIT_VARS]", init_vars)
     return code
+
+
+def e_asm_fun(expr, delta_function):
+    global cpt_cmp
+    if expr[0] == 'nb':
+        return ["mov rax, " + expr[1]]
+    elif expr[0] == 'var':
+        return ["mov rax, [" + delta_function[expr[1]] + "]"]
+    elif expr[0] == 'opbin':
+
+        e_fin = "fin_cmp_%s" % cpt_cmp
+        e_saut = "cmp_%s" % cpt_cmp
+        cpt_cmp += 1
+
+        res = e_asm_fun(expr[3], delta_function)
+        res.append("push rax")
+        res += e_asm_fun(expr[1], delta_function)
+        res.append("pop rbx")
+
+        if expr[2] == '+':
+            res.append("add rax, rbx")
+        elif expr[2] == '-':
+            res.append("sub rax, rbx")
+        else:
+            res.append("cmp rax, rbx")
+            res.append(i_test[expr[2]] + " " + e_saut)
+            res.append("mov rax, 0")
+            res.append("jmp %s" % e_fin)
+            res.append("%s: mov rax, 1" % e_saut)
+            res.append("%s:" % e_fin)
+        return res
+
+
+def i_asm_fun(instr, delta_function):
+    global cptinstr
+    i = instr[0]
+    st = []
+    if i == "affect":  # var = instr[1][1], expr = instr[2]
+        st += e_asm_fun(instr[2], delta_function)
+        st.append("mov [" + delta_function[instr[1][1]] + "], rax")
+    elif i == 'seq':
+        st += i_asm_fun(instr[1], delta_function)
+        st += i_asm_fun(instr[2], delta_function)
+    elif i == 'if':
+        st += e_asm_fun(instr[1], delta_function)
+        st.append("cmp rax, 0")
+        st.append("jz jzfin" + str(cptinstr))
+        st += i_asm_fun(instr[2], delta_function)
+        st.append("jzfin" + str(cptinstr) + ":")
+        cptinstr += 1
+    elif i == 'while':
+        st.append("debut" + str(cptinstr) + ":")
+        st += e_asm_fun(instr[1], delta_function)
+        st.append("cmp rax, 0")
+        st.append("jz jzfin" + str(cptinstr))
+        st += i_asm_fun(instr[2], delta_function)
+        st.append("jmp debut" + str(cptinstr))
+        st.append("jzfin" + str(cptinstr) + ":")
+        cptinstr += 1
+    return st
+
+def fun_asm(prg):
+    code = open("moule.asm").read()
+    fun_decl_asm = ""
+    for fun_def in prg[1]:
+        delta_fun = delta(fun_def)
+        fun_decl_asm += fun_def[1][1] + ": pop rbp\n"
+        fun_decl_asm += "mov rbp, rsp\n"
+        nb_var_loc = len(fun_vars(fun_def))
+        fun_decl_asm += "sub rsp, " + str(nb_var_loc) + "\n"
+        for elem in i_asm_fun(fun_def[3]):
+            fun_decl_asm += elem
+            fun_decl_asm += "\n"
+
+        fun_decl_asm += "mov rsp, rbp\n"
+        fun_decl_asm += "pop rbp\n"
+        fun_decl_asm += "ret\n"
+
 
 #print(p_asm(x))
         
