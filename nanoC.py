@@ -42,10 +42,20 @@ class NanoCLexer(Lexer):
 
 
 programme = '''
+inc(a){
+    if(a < 10){
+        b = inc(a + 1);
+    }
+    if(a >= 10){
+        b = 10;
+    }
+    return b;
+}
+
 f(d, e){
     d = d + 1;
-    e = e - d;
-    h = e + e;
+    e = e + d;
+    h = g(d, e);
     return h;
 }
 
@@ -56,8 +66,9 @@ g(h, i){
 
 main(a, b, c){
     c = a + c;
-    a = f(a, b);
-    d = c + a;
+    a = g(a + c, d);
+    d = f(c + a, d);
+    d = inc(d);
     return d;
 }'''
 
@@ -84,14 +95,14 @@ class NanoCParser(Parser):
     def function_def(self, p):
         return 'function def', p[0], p[2], p[5], p[7]
 
-    @_('function_def functionlist')
+    @_('function_def function_def')
     def functionlist(self, p):
         return p[0], p[1]
 
-    @_('function_def')
+    @_('function_def functionlist')
     def functionlist(self, p):
-        return p[0]
-    
+        return (p[0],) + p[1]
+
     @_('instr instr')
     def instr(self, p):
         return 'seq', p[0], p[1]
@@ -168,6 +179,10 @@ class NanoCParser(Parser):
     def expr(self, p):
         return 'function call', p[0], p[2]
 
+    @_('function LPAREN expr RPAREN')
+    def expr(self, p):
+        return 'function call', p[0], (p[2],)
+
 
 
 parser = NanoCParser()
@@ -187,6 +202,8 @@ def fun_args(function_def):
     Prend en arg un tuple dont le premier élément est 'function def'
     Renvoie la liste des arguments de la fonction
     """
+    if len(function_def[2]) == 1:
+        return [function_def[2][0][1]]
     return [elem[1] for elem in function_def[2]]
 
 def fun_vars(function_def):
@@ -385,6 +402,16 @@ def e_asm_fun(expr, delta_function):
             res.append("%s: mov rax, 1" % e_saut)
             res.append("%s:" % e_fin)
         return res
+    elif expr[0] == 'function call':
+        res = []
+        for i in range(len(expr[2])):
+            print(expr[2])
+            res += e_asm_fun(expr[2][-(i+1)], delta_function)
+            res.append("push rax")
+        res.append("call %s" %expr[1][1])
+        temp = ["pop rcx" for i in range(len(expr[2]))]
+        res += temp
+        return res
 
 
 def i_asm_fun(instr, delta_function):
@@ -430,7 +457,8 @@ def fun_asm(prg):
         fun_decl_asm.append("ret")
 
     return fun_decl_asm
-
+print("ici")
+print(x[1][0][2][0][1])
 print(fun_asm(x))
 print(p_asm(x))
         
