@@ -45,8 +45,8 @@ programme = '''
 f(d, e){
     d = d + 1;
     e = e - d;
-    g = e;
-    return g;
+    h = e;
+    return h;
 }
 
 g(h, i){
@@ -55,7 +55,8 @@ g(h, i){
 }
 
 main(a, b, c){
-    c = f(a + b, c);
+    c = a + c;
+    a = f(a, b);
     d = c + a;
     return d;
 }'''
@@ -416,7 +417,7 @@ def fun_asm(prg):
     fun_decl_asm = []
     for fun_def in prg[1]:
         delta_fun = delta(fun_def)
-        fun_decl_asm.append(fun_def[1][1] + ": pop rbp")
+        fun_decl_asm.append(fun_def[1][1] + ": push rbp")
         fun_decl_asm.append("mov rbp, rsp")
         nb_var_loc = len(fun_vars(fun_def))
         fun_decl_asm.append("sub rsp, " + str(8*nb_var_loc))
