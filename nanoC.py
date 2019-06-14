@@ -70,7 +70,8 @@ main(a, b, c){
     d = f(c + a, d);
     d = inc(d);
     return d;
-}'''
+}
+'''
 
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
@@ -82,6 +83,9 @@ class NanoCParser(Parser):
 
     #start = 'varlist'
 
+    @_('function_def main')
+    def prog(self, p):
+        return 'prog', (p[0],), p[1]
 
     @_('functionlist main')
     def prog(self, p):
