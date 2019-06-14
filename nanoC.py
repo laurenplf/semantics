@@ -66,9 +66,9 @@ g(h, i){
 
 main(a, b, c){
     c = a + c;
-    a = g(a + c, d);
+    a = g(inc(a + c), d);
     d = f(c + a, d);
-    d = inc(d);
+    d = inc(f(d, a));
     return d;
 }
 '''
