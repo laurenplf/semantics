@@ -42,6 +42,13 @@ class NanoCLexer(Lexer):
 
 
 programme = '''
+test(a, b , c, d){
+    a = a + b;
+    a = a + c;
+    a = a + d;
+    return a;
+}
+
 inc(a){
     if(a < 10){
         b = inc(a + 1);
