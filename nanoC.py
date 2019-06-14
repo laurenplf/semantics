@@ -45,7 +45,7 @@ programme = '''
 f(d, e){
     d = d + 1;
     e = e - d;
-    h = e;
+    h = e + e;
     return h;
 }
 
@@ -304,6 +304,8 @@ def e_asm(expr):
             res += e_asm(expr[2][-(i+1)])
             res.append("push rax")
         res.append("call %s" %expr[1][1])
+        temp = ["pop rcx" for i in range(len(expr[2]))]
+        res += temp
         return res
  
 def i_asm(instr):
@@ -341,7 +343,7 @@ def p_asm(prg):
     code = code.replace("[DECLS_VARS]", declarations(p_vars(prg)))
     code = code.replace("[CODE]", "\n".join(i_asm(prg[2][2])))
     ret = e_asm(prg[2][3])
-    ret += ["mov rdi, nombre", "mov rsi, rax", "call printf"]
+    ret += ["mov rdi, nombre", "mov rsi, rax", "xor rax, rax", "call printf"]
     code = code.replace("[RETURN]", "\n".join(ret))
     init_vars = ""
     N = len(prg[2][1]) #nombre d'arguments
