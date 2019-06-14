@@ -46,7 +46,7 @@ class NanoCLexer(Lexer):
 
 
 
-programme = '''main(a,b,c){**p = 1; return a;}'''
+programme = '''main(i){z = 1; p = malloc(10); p = &i; *p = 2; i = 10; z = *p; return z;}'''
 
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
@@ -69,6 +69,11 @@ class NanoCParser(Parser):
     @_('point EQUAL MALLOC LPAREN expr RPAREN SEMICOLON')
     def instr(self, p):
         return 'malloc', p[0], p[4]
+
+    
+    @_('ID EQUAL AST point SEMICOLON')
+    def instr(self, p):
+        return 'affect_point',('var', p[0]), p[2], p[3]    
     
     @_('point EQUAL ESP expr SEMICOLON')
     def instr(self, p):
@@ -81,6 +86,13 @@ class NanoCParser(Parser):
     @_('WHILE LPAREN expr RPAREN LBRACE instr RBRACE')
     def instr(self, p):
         return 'while', p[2], p[5]
+    @_('point EQUAL expr SEMICOLON')
+    def instr(self, p):
+        return 'affect', ('var', p[0]), p[2]
+    
+    @_('ID EQUAL point SEMICOLON')
+    def instr(self, p):
+        return 'affect', ('var', p[0]), p[2]
     
     @_('ID EQUAL expr SEMICOLON')
     def instr(self, p):
@@ -129,11 +141,20 @@ class NanoCParser(Parser):
     @_('NUMBER')
     def expr(self, p):
         return 'nb', p[0]
-
+    @_('P ID')
+    def expr(self, p):
+        return ('var', p[0]+p[1])  
     @_('ID')
     def expr(self, p):
         return 'var', p[0]
+    @_('P ID')
+    def varlist(self, p):
+        return ('var', p[0]+p[1])
+  
 
+    @_('P ID COMMA varlist')
+    def varlist(self, p):
+        return (('var', p[0]+p[1]),) + p[2]
     @_('ID')
     def varlist(self, p):
         return ('var', p[0]),
@@ -189,7 +210,10 @@ def i_vars(instr):
         vars |= {instr[2][1]} 
     elif i=='point_affect':
         vars |= {instr[2][1]}
-        vars |= e_vars(instr[3][1])      
+        vars |= e_vars(instr[3][1])
+    elif i =='affect_point':
+        vars |= {instr[1][1]}
+        vars |= e_vars(instr[3][1])
     return vars
      
       
@@ -205,7 +229,7 @@ def e_asm(expr):
     global cpt_cmp
     if expr[0] == 'nb':
         return ["mov rax, " + expr[1]]
-    elif expr[0] == 'var':
+    elif expr[0] == 'var' or expr[0] == 'point':
         return ["mov rax, [" + expr[1] + "]"]
     elif expr[0] == 'opbin':
         
@@ -235,22 +259,35 @@ def i_asm(instr):
     global cptinstr
     i = instr[0]
     st = []
-    if i == "affect": # var = instr[1][1], expr = instr[2]
+    if i == "affect":
         st += e_asm(instr[2]) 
         st.append("mov [" + str(instr[1][1]) + "], rax")
     elif i == 'adress_affect':
-        st.append("lea rax, ["+str(instr[2][1])+"]")
-        st.append("mov QWORD PTR ["+ str(instr[1][1]) +"], rax")
+        if "]" in e_asm(instr[2])[-1]:
+            s = str(e_asm(instr[2])[-1][0:-1]).split("[")
+            st += [s[0]+s[1]]
+        else:
+            st += e_asm(instr[2])
+        st.append("mov [" + str(instr[1][1]) + "], rax")      
     elif i == 'point_affect':
         st += e_asm(instr[3])
-        for k in range(len(instr[1])):
-            st.append("mov rax, QWORD PTR [rax]")
-        st.append("mov DWORD PTR [" + str(instr[2][1]) + "], rax")
+        st.append("mov ebx, [" + str(instr[2][1]) + "]")
+        """
+        for k in range(1,len(instr[1])):
+            st.append("mov ebx,[ebx]")
+        """
+        st.append("mov [ebx], rax")
+    elif i == 'affect_point':
+        st.append("mov rax, [" + str(instr[3][1]) + "]")
+        for k in range(1,len(instr[2])):
+            st.append("mov rax,[rax]")
+        st.append("mov eax, [rax]")
+        st.append("mov [" + str(instr[1][1]) + "], eax")
     elif i == 'malloc':
         st += e_asm(instr[2])
-        st.append("mov edi, rcx")
+        st.append("mov rdi, rax")
         st.append("call malloc")
-        st.append("mov DWORD PTR [" + str(instr[1][1]) + "], rax")
+        st.append("mov ["+str(instr[1][1])+"], rax")        
     elif i == 'seq':
         st += i_asm(instr[1])
         st += i_asm(instr[2])
@@ -290,7 +327,7 @@ def p_asm(prg):
     code = code.replace("[INIT_VARS]", init_vars)
     return code
 
-#print(p_asm(x))
+print(p_asm(x))
         
     
     
