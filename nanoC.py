@@ -54,8 +54,8 @@ g(h, i){
     return i;
 }
 
-main(a,b,c){
-    c = f(a+b, c);
+main(a, b, c){
+    c = f(a + b, c);
     d = c + a;
     return d;
 }'''
@@ -345,7 +345,7 @@ def p_asm(prg):
     init_vars = ""
     N = len(prg[2][1]) #nombre d'arguments
     for i in range(N):
-        iv = ["mov rax, [argv]", "mov rbx, [rbp+DELTA]", "mov rdi, rbx", "call atoi", "mov [VAR], rax"]
+        iv = ["mov rax, [argv]", "mov rbx, [rax+DELTA]", "mov rdi, rbx", "call atoi", "mov [VAR], rax"]
         iv[1] = iv[1].replace("DELTA", str((i+1)*8))
         iv[4] = iv[4].replace("VAR", prg[2][1][i][1])
         init_vars += "\n"+ "\n".join(iv)
