@@ -42,7 +42,7 @@ class NanoCLexer(Lexer):
 
 
 programme = '''
-testt(){
+zero(){
     return 0;
 }
 
@@ -80,7 +80,7 @@ main(a, b, c){
     a = g(inc(a + c), d);
     d = f(c + a, d);
     d = inc(f(d, a));
-    d = testt();
+    d = zero();
     return d;
 }
 '''
