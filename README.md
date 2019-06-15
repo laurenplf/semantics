@@ -15,7 +15,10 @@ Possibilité de déclarer des fonctions autres que "main"
 ## Utilisation des fonctions
 
 - Les appels de fonctions s'effectuent comme en C
-- Les paramètres donnés à la fonction annexe peuvent être des variables, des sommes de variables, des nombres, un résultat d'une autre fonction annexe appelée en argument
+- Les paramètres donnés à la fonction annexe peuvent être des variables
+    + des sommes de variables
+    + des nombres
+    + un résultat d'une autre fonction annexe appelée en argument
 
 ## Avertissement
 
