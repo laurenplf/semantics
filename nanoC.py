@@ -42,6 +42,11 @@ class NanoCLexer(Lexer):
 
 
 programme = '''
+testt(){
+    a = 0;
+    return a;
+}
+
 test(a, b , c, d){
     a = a + b;
     a = a + c;
@@ -76,6 +81,7 @@ main(a, b, c){
     a = g(inc(a + c), d);
     d = f(c + a, d);
     d = inc(f(d, a));
+    d = testt();
     return d;
 }
 '''
@@ -105,6 +111,10 @@ class NanoCParser(Parser):
     @_('function LPAREN varlist RPAREN LBRACE instr RETURN expr SEMICOLON RBRACE')
     def function_def(self, p):
         return 'function def', p[0], p[2], p[5], p[7]
+
+    @_('function LPAREN RPAREN LBRACE instr RETURN expr SEMICOLON RBRACE')
+    def function_def(self, p):
+        return 'function def', p[0], tuple(), p[4], p[6]
 
     @_('function_def function_def')
     def functionlist(self, p):
@@ -189,6 +199,10 @@ class NanoCParser(Parser):
     @_('function LPAREN exprlist RPAREN')
     def expr(self, p):
         return 'function call', p[0], p[2]
+
+    @_('function LPAREN RPAREN')
+    def expr(self, p):
+        return 'function call', p[0], tuple()
 
     @_('function LPAREN expr RPAREN')
     def expr(self, p):
@@ -416,7 +430,6 @@ def e_asm_fun(expr, delta_function):
     elif expr[0] == 'function call':
         res = []
         for i in range(len(expr[2])):
-            print(expr[2])
             res += e_asm_fun(expr[2][-(i+1)], delta_function)
             res.append("push rax")
         res.append("call %s" %expr[1][1])
@@ -468,8 +481,7 @@ def fun_asm(prg):
         fun_decl_asm.append("ret")
 
     return fun_decl_asm
-print("ici")
-print(x[1][0][2][0][1])
+
 print(fun_asm(x))
 print(p_asm(x))
         
