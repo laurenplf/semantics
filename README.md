@@ -26,47 +26,47 @@ Possibilité de déclarer des fonctions autres que "main"
 
 ## Exemple
 
-'''
+'''  
 zero(){  
-    return 0;  
+    &ensp;&ensp;&ensp;&ensp;return 0;  
 }  
   
 test(a, b , c, d){  
-    a = a + b;  
-    a = a + c;  
-    a = a + d;  
-    return a;  
+    &ensp;&ensp;&ensp;&ensp;a = a + b;  
+    &ensp;&ensp;&ensp;&ensp;a = a + c;  
+    &ensp;&ensp;&ensp;&ensp;a = a + d;  
+    &ensp;&ensp;&ensp;&ensp;return a;  
 }  
   
 inc(a){  
-    if(a < 10){  
-        b = inc(a + 1);  
-    }  
-    if(a >= 10){  
-        b = 10;  
-    }  
-    return b;  
+    &ensp;&ensp;&ensp;&ensp;if(a < 10){  
+        &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;b = inc(a + 1);  
+    &ensp;&ensp;&ensp;&ensp;}  
+    &ensp;&ensp;&ensp;&ensp;if(a >= 10){  
+        &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;b = 10;  
+    &ensp;&ensp;&ensp;&ensp;}  
+    &ensp;&ensp;&ensp;&ensp;return b;  
 }  
   
 f(d, e){  
-    d = d + 1;  
-    e = e + d;  
-    h = g(d, e);  
-    return h;  
+    &ensp;&ensp;&ensp;&ensp;d = d + 1;  
+    &ensp;&ensp;&ensp;&ensp;e = e + d;  
+    &ensp;&ensp;&ensp;&ensp;h = g(d, e);  
+    &ensp;&ensp;&ensp;&ensp;return h;  
 }  
 
 g(h, i){  
-    i = i + h;  
-    return i;  
+    &ensp;&ensp;&ensp;&ensp;i = i + h;  
+    &ensp;&ensp;&ensp;&ensp;return i;  
 }  
   
 main(a, b, c){  
-    c = a + c;  
-    a = g(inc(a + c), d);  
-    d = f(c + a, d);  
-    d = inc(f(d, a));  
-    d = zero();  
-    return d;  
+    &ensp;&ensp;&ensp;&ensp;c = a + c;  
+    &ensp;&ensp;&ensp;&ensp;a = g(inc(a + c), d);  
+    &ensp;&ensp;&ensp;&ensp;d = f(c + a, d);  
+    &ensp;&ensp;&ensp;&ensp;d = inc(f(d, a));  
+    &ensp;&ensp;&ensp;&ensp;d = zero();  
+    &ensp;&ensp;&ensp;&ensp;return d;  
 }  
 '''
 
