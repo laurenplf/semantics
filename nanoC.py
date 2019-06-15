@@ -43,8 +43,7 @@ class NanoCLexer(Lexer):
 
 programme = '''
 testt(){
-    a = 0;
-    return a;
+    return 0;
 }
 
 test(a, b , c, d){
