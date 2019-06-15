@@ -95,6 +95,10 @@ class NanoCParser(Parser):
 
     #start = 'varlist'
 
+    @_('main')
+    def prog(self, p):
+        return 'prog', tuple(), p[0]
+
     @_('function_def main')
     def prog(self, p):
         return 'prog', (p[0],), p[1]
@@ -300,9 +304,9 @@ def delta(function_def):
     return result
       
 print("main : all vars = %s\n" %str(p_vars(x)))
-print("f : args = %s\n" %str(fun_args(x[1][0])))
-print("f : vars = %s\n" %str(fun_vars(x[1][0])))
-print("f : delta = %s\n" %str(delta(x[1][0])))
+#print("f : args = %s\n" %str(fun_args(x[1][0])))
+#print("f : vars = %s\n" %str(fun_vars(x[1][0])))
+#print("f : delta = %s\n" %str(delta(x[1][0])))
     
 global cpt_cmp
 global cptinstr
