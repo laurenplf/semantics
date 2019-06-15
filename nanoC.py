@@ -46,7 +46,7 @@ class NanoCLexer(Lexer):
 
 
 
-programme = '''main(i){z = 1; p = malloc(10); p = &i; *p = 2; i = 10; z = *p; return z;}'''
+programme = '''main(i){q = malloc(8); i = 55; *q = 58; p = &i; q = &p; x = *p; z = **q; return x;}'''
 
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
@@ -70,7 +70,6 @@ class NanoCParser(Parser):
     def instr(self, p):
         return 'malloc', p[0], p[4]
 
-    
     @_('ID EQUAL AST point SEMICOLON')
     def instr(self, p):
         return 'affect_point',('var', p[0]), p[2], p[3]    
@@ -86,6 +85,7 @@ class NanoCParser(Parser):
     @_('WHILE LPAREN expr RPAREN LBRACE instr RBRACE')
     def instr(self, p):
         return 'while', p[2], p[5]
+    
     @_('point EQUAL expr SEMICOLON')
     def instr(self, p):
         return 'affect', ('var', p[0]), p[2]
@@ -101,15 +101,7 @@ class NanoCParser(Parser):
     @_('IF LPAREN expr RPAREN LBRACE instr RBRACE')
     def instr(self, p):
         return 'if', p[2], p[5]
-    
-    @_('P ID')
-    def point(self,p):
-        return 'point', p[0]+p[1]  
-    
-    @_('P')
-    def point(self,p):
-        return 'point', p[0]
-    
+
     @_('LPAREN expr RPAREN')
     def expr(self, p):
         return p[1]
@@ -141,16 +133,30 @@ class NanoCParser(Parser):
     @_('NUMBER')
     def expr(self, p):
         return 'nb', p[0]
+    
     @_('P ID')
     def expr(self, p):
         return ('var', p[0]+p[1])  
+    
     @_('ID')
     def expr(self, p):
         return 'var', p[0]
+    
+    @_('P')
+    def expr(self,p):
+        return 'point', p[0]    
+    
+    @_('P ID')
+    def point(self,p):
+        return 'point', p[0]+p[1]  
+    
+    @_('P')
+    def point(self,p):
+        return 'point', p[0]
+    
     @_('P ID')
     def varlist(self, p):
-        return ('var', p[0]+p[1])
-  
+        return ('var', p[0]+p[1])    
 
     @_('P ID COMMA varlist')
     def varlist(self, p):
@@ -272,10 +278,8 @@ def i_asm(instr):
     elif i == 'point_affect':
         st += e_asm(instr[3])
         st.append("mov ebx, [" + str(instr[2][1]) + "]")
-        """
         for k in range(1,len(instr[1])):
             st.append("mov ebx,[ebx]")
-        """
         st.append("mov [ebx], rax")
     elif i == 'affect_point':
         st.append("mov rax, [" + str(instr[3][1]) + "]")
