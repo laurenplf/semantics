@@ -119,6 +119,14 @@ class NanoCParser(Parser):
     def function_def(self, p):
         return 'function def', p[0], tuple(), p[4], p[6]
 
+    @_('function LPAREN varlist RPAREN LBRACE RETURN expr SEMICOLON RBRACE')
+    def function_def(self, p):
+        return 'function def', p[0], p[2], tuple(), p[6]
+
+    @_('function LPAREN RPAREN LBRACE RETURN expr SEMICOLON RBRACE')
+    def function_def(self, p):
+        return 'function def', p[0], tuple(), tuple(), p[5]
+
     @_('function_def function_def')
     def functionlist(self, p):
         return p[0], p[1]
@@ -219,9 +227,7 @@ parser = NanoCParser()
     
 x = parser.parse(lexer.tokenize(programme))
 print("x = %s\n" % str(x))
-for elem in x:
-    print(elem)
-print("\n")
+
 
 
 
@@ -262,7 +268,7 @@ def p_vars(prg):
 
 def e_vars(expr):
     if expr[0] == 'var':
-        return { expr[1] }
+        return {expr[1]}
     if expr[0] == 'nb':
         return set()
     if expr[0] == 'opbin':
@@ -273,6 +279,8 @@ def e_vars(expr):
 
 def i_vars(instr):
     #print(instr)
+    if len(instr) == 0:
+        return set()
     i = instr[0]
     vars = set()
     if i == 'while' or i == 'if':
@@ -303,7 +311,7 @@ def delta(function_def):
         cpt += 1
     return result
       
-print("main : all vars = %s\n" %str(p_vars(x)))
+#print("main : all vars = %s\n" %str(p_vars(x)))
 #print("f : args = %s\n" %str(fun_args(x[1][0])))
 #print("f : vars = %s\n" %str(fun_vars(x[1][0])))
 #print("f : delta = %s\n" %str(delta(x[1][0])))
@@ -442,6 +450,8 @@ def e_asm_fun(expr, delta_function):
 
 
 def i_asm_fun(instr, delta_function):
+    if len(instr) == 0:
+        return []
     global cptinstr
     i = instr[0]
     st = []
@@ -478,14 +488,14 @@ def fun_asm(prg):
         nb_var_loc = len(fun_vars(fun_def))
         fun_decl_asm.append("sub rsp, " + str(8*nb_var_loc))
         fun_decl_asm += i_asm_fun(fun_def[3], delta_fun)
-
+        fun_decl_asm += e_asm_fun(fun_def[4], delta_fun)
         fun_decl_asm.append("mov rsp, rbp")
         fun_decl_asm.append("pop rbp")
         fun_decl_asm.append("ret")
 
     return fun_decl_asm
 
-print(fun_asm(x))
+#print(fun_asm(x))
 print(p_asm(x))
         
     
