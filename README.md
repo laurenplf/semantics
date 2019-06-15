@@ -1,11 +1,11 @@
 # Semantics
 # Compilateur : les fonctions
 
-Possibilité de déclarer des fonctions autres que "main".
+Possibilité de déclarer des fonctions autres que "main"
 
 ## Déclaration des fonctions
 
-- Les fonctions annexes doivent être déclarées AVANT "main". Une déclaration après "main" entraînera un échec au niveau du parser.
+- Les fonctions annexes doivent être déclarées AVANT "main". Une déclaration après "main" entraînera un échec au niveau du parser
 - Il n'y a pas de limitation quant au nombre de fonctions annexes qui peuvent être déclarées mais elles doivent l'être comme en C (en faisant abstraction du typage)
 - Il n'y a pas de limitation quant au nombre d'arguments que peut attendre une fonction annexe mais il doivent être séparés par des virgules
 - Le "main" a besoin d'au moins un argument et ne peut pas avoir de bloc d'instructions vide (contrairement aux fonctions annexes qui peuvent se passer d'instructions)
@@ -24,47 +24,47 @@ Possibilité de déclarer des fonctions autres que "main".
 ## Exemple
 
 '''
-zero(){
-    return 0;
-}
+zero(){  
+    return 0;  
+}  
+  
+test(a, b , c, d){  
+    a = a + b;  
+    a = a + c;  
+    a = a + d;  
+    return a;  
+}  
+  
+inc(a){  
+    if(a < 10){  
+        b = inc(a + 1);  
+    }  
+    if(a >= 10){  
+        b = 10;  
+    }  
+    return b;  
+}  
+  
+f(d, e){  
+    d = d + 1;  
+    e = e + d;  
+    h = g(d, e);  
+    return h;  
+}  
 
-test(a, b , c, d){
-    a = a + b;
-    a = a + c;
-    a = a + d;
-    return a;
-}
-
-inc(a){
-    if(a < 10){
-        b = inc(a + 1);
-    }
-    if(a >= 10){
-        b = 10;
-    }
-    return b;
-}
-
-f(d, e){
-    d = d + 1;
-    e = e + d;
-    h = g(d, e);
-    return h;
-}
-
-g(h, i){
-    i = i + h;
-    return i;
-}
-
-main(a, b, c){
-    c = a + c;
-    a = g(inc(a + c), d);
-    d = f(c + a, d);
-    d = inc(f(d, a));
-    d = zero();
-    return d;
-}
+g(h, i){  
+    i = i + h;  
+    return i;  
+}  
+  
+main(a, b, c){  
+    c = a + c;  
+    a = g(inc(a + c), d);  
+    d = f(c + a, d);  
+    d = inc(f(d, a));  
+    d = zero();  
+    return d;  
+}  
 '''
 
 ## Compilation du code assembleur produit
