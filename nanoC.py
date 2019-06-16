@@ -9,7 +9,7 @@ def declarations(vars):
                 if v[i] == "_":
                     indice = i
             zero = "0"+(( int( (taille_struct(v[:indice])/8) - 1))*",0")
-            decls = decls+(v+":\tTAB dq "+zero+"\n")
+            decls = decls+(v+":\tdq "+zero+"\n")
         else:
             decls = decls + (v+":\tdq 0\n")
     return decls            
@@ -56,8 +56,8 @@ class NanoCLexer(Lexer):
 
 #programme = '''struct{int a;}s;main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
 #programme = '''struct{int a;struct point point_p;}s;struct{int x; int y;}point;main(a,b,c){a = c; return a;}'''
-#programme = '''struct{int x; int y;}point;main(a,b,c){point_a.x = point_b.y; a = 3; return a;}'''
-programme = '''struct{int a;struct point point_p;int b;}s;struct{int x; int y;}point;main(a,b,c){s_test.point_p.x = 5; a = 3; return a;}'''
+programme = '''struct{int x; int y;}point;main(a,b,c){val = 3; point_a.x = val; point_b.y = 10; a = 3; return a;}'''
+#programme = '''struct{int a;struct point point_p;int b;}s;struct{int x; int y;}point;main(a,b,c){s_test.point_p.x = 5; a = 3; return a;}'''
 #programme = '''main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
 print(programme+"\n")
 
@@ -122,7 +122,7 @@ class NanoCParser(Parser):
 #    def instr(self, p):
 #        return 'affect', p[0], p[2]
     
-    @_('lhs EQUAL lhs SEMICOLON')
+    @_('lhs EQUAL expr SEMICOLON')
     def instr(self, p):
         return 'affect', p[0], p[2]    
     
@@ -183,6 +183,8 @@ class NanoCParser(Parser):
     @_('expr')
     def lhs(self, p):
         return p[0]
+    
+    
     
 #    @_('rhs DOT rhs')
 #    def rhs(self, p):
@@ -256,18 +258,24 @@ def position_dans_struct(s, b):
                 cpt += position_dans_struct(l[i+1], b)
                 i += 3
     return cpt
-            
-def decl_struct(d):
-    for s in d:
-        decls = ['%s:\tdq 0' % v for v in vars]
-    return "\n".join(decls)
 
-#print(position_dans_struct('point', 'x'))
+# donne l'attribut present dans un lhs 
+def attribut_affect(lhs):
+    if lhs[0] == 'var':
+        return lhs[1]
+    elif lhs[0] == 'dot':
+        return attribut_affect(lhs[2])
+
+# renvoit un couple(structure,nom de la structure)
+def struct_lhs(lhs):
+    if lhs[0] == 'struct':
+        return (lhs[1],lhs[2])
+    elif lhs[0] == 'dot':
+        return struct_lhs(lhs[1])
+
+#print(position_dans_struct('s', 'point_x'))
 #print(taille_struct('point'))
 
-#s = "abcd"
-#for (indice,k1) in enumerate(s):
-#    print(indice,k1)
 
 
 
@@ -321,19 +329,23 @@ def i_vars(instr):
 def lhs_vars(lhs):
     #print(lhs[0])
     if lhs[0] == 'dot':
+        #print('dot')
         return lhs_vars(lhs[1]) | lhs_vars(lhs[2])
         #return lhs_vars(lhs[1])
     if lhs[0] == 'struct':
         return { lhs[1]+'_'+lhs[2] }
+    if lhs[0] == 'var':
+        #print(lhs[1])
+        return e_vars(lhs)
     else:
         return set() 
-    
+        #return e_vars(lhs[1])
 
     
     #return set()
       
 #print(p_vars(x))
-    
+#print(declarations(p_vars(x[2])))
 
 ## Compilation de chaque element
 global cpt_cmp
@@ -372,13 +384,39 @@ def e_asm(expr):
             res.append("%s:" % e_fin)
         return res
  
+def lhs_asm(lhs):
+    if lhs[0] == "var":
+        return ["mov rbx, "+lhs[1]]
+    
+    #if lhs[0] == "struct":
+    #    return position_dans_struct(lhs[1], lhs[2])
+    
+    if lhs[0] == "dot":
+        pt_struct = struct_lhs(lhs)[0]+"_"+struct_lhs(lhs)[1]
+        delta = str(position_dans_struct(struct_lhs(lhs)[0],attribut_affect(lhs)))
+        pos = pt_struct+"+"+delta
+        return ["mov rbx, "+pos]
+        #return lhs[1][1]+"_"+lhs[1][2] + position_dans_struct(lhs[1][1], lhs[2][1])
+        
+        #res = ["mov rax, "+lhs[1][1]+"_"+lhs[1][2]]
+        #res.append(lhs_asm(lhs[2]))
+    else:
+        return
+    
+#print(lhs_asm[])
+    
+    
 def i_asm(instr):
     global cptinstr
     i = instr[0]
     st = []
     if i == "affect": # var = instr[1][1], expr = instr[2]
-        st += e_asm(instr[2]) 
-        st.append("mov [" + str(instr[1][1]) + "], rax")
+        st += lhs_asm(instr[1])
+        st += e_asm(instr[2])
+        st.append("mov [rbx], rax")
+        #st += lhs_asm(instr[2])
+        #st.append("mov [" + str(instr[1][1]) + "], rax")
+        #trouver la bonne ligne a ecrire
     elif i == 'seq':
         st += i_asm(instr[1])
         st += i_asm(instr[2])
@@ -404,26 +442,29 @@ def i_asm(instr):
 ## Compilation d'un programme (une fois qu'il a été parsé)
 def p_asm(prg):
     code = open("moule.asm").read()
-    #code = code.replace("[DECLS_STRUCT]", declarations(p_vars(prg)))
     code = code.replace("[DECLS_VARS]", declarations(p_vars(prg[2])))
-    code = code.replace("[CODE]", "\n".join( i_asm(prg[2])))
-    ret = e_asm(prg[3])
+    code = code.replace("[CODE]", "\n".join( i_asm(prg[2][2])))
+    ret = e_asm(prg[2][3])
     ret += ["mov rdi, nombre", "mov rsi, rax", "call printf"]
     code = code.replace("[RETURN]", "\n".join(ret))
     init_vars = ""
-    N = len(prg[1])
+    N = len(prg[2][1])
+    #print(prg[2][1])
+    #print(N)
     for i in range(N):
-        iv = ["mov rax, [argv]", "mov rbx, [rax+DELTA]", "mov rdi, rbx", "call atoi", "mov [VAR], rax"]
-        iv[1] = iv[1].replace("DELTA", str((i+1)*8))
-        iv[4] = iv[4].replace("VAR", prg[1][i][1])
-        init_vars += "\n"+ "\n".join(iv)
+        if prg[2][1][i] == "var":     
+        #print(prg[2][1][i][1])
+            iv = ["mov rax, [argv]", "mov rbx, [rax+DELTA]", "mov rdi, rbx", "call atoi", "mov [VAR], rax"]
+            iv[1] = iv[1].replace("DELTA", str((i+1)*8))
+            iv[4] = iv[4].replace("VAR", prg[2][1][i+1])
+            init_vars += "\n"+ "\n".join(iv)
     code = code.replace("[INIT_VARS]", init_vars)
     return code
 
-#print(p_asm(x))
+print(p_asm(x))
         
 #print(p_vars(x[2]))
-print(declarations(p_vars(x[2])))
+#print(declarations(p_vars(x[2])))
      
      
 
