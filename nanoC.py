@@ -113,15 +113,7 @@ class NanoCParser(Parser):
     @_('WHILE LPAREN expr RPAREN LBRACE instr RBRACE')
     def instr(self, p):
         return 'while', p[2], p[5]
-    
-#    @_('ID EQUAL expr SEMICOLON')
-#    def instr(self, p):
-#        return 'affect', ('var', p[0]), p[2]    
-    
-#    @_('lhs EQUAL expr SEMICOLON')
-#    def instr(self, p):
-#        return 'affect', p[0], p[2]
-    
+
     @_('lhs EQUAL expr SEMICOLON')
     def instr(self, p):
         return 'affect', p[0], p[2]    
@@ -162,9 +154,7 @@ class NanoCParser(Parser):
     def expr(self, p):
         return 'nb', p[0]
 
-#    @_('ID')
-#   def expr(self, p):
-#        return 'var', p[0]
+
     @_('ID')
     def expr(self, p):
         if "_" in p[0]:
@@ -185,15 +175,6 @@ class NanoCParser(Parser):
         return p[0]
     
     
-    
-#    @_('rhs DOT rhs')
-#    def rhs(self, p):
-#        return p[0], p[2]
-
-#    @_('expr')
-#    def rhs(self, p):
-#        return p[0]
-    
 
     @_('ID')
     def varlist(self, p):
@@ -207,12 +188,10 @@ class NanoCParser(Parser):
 
 
 parser = NanoCParser()
-#for t in lexer.tokenize(programme):
-    #print(t)
+
     
 x = parser.parse(lexer.tokenize(programme))
 print("x = %s \n" % str(x))
-#print(x[1])
 
 
 ## fonctions sur les structures
@@ -223,8 +202,10 @@ def create_dict_struct(s):
             d[s[i+2]] = s[i+1]
     return d
 
+# creation du dictionnaire sur les structures
 d_struct = create_dict_struct(x[1][1])
 
+# donne la taille en octets d'une structure
 # par exemple, s = ('int', 'x', 'int', 'y')
 def taille_struct(s):
     l = d_struct[s]
@@ -239,6 +220,7 @@ def taille_struct(s):
             i += 3
     return cpt
 
+# revoir la position relative d'un attribut dans une structure
 def position_dans_struct(s, b):
     l = d_struct[s]
     cpt = 0
@@ -273,43 +255,29 @@ def struct_lhs(lhs):
     elif lhs[0] == 'dot':
         return struct_lhs(lhs[1])
 
-#print(position_dans_struct('s', 'point_x'))
-#print(taille_struct('point'))
-
-
 
 
 ##recherche des variables du programme
 def p_vars(prg):
-    #print(prg)
-    #print(prg[1])
     vars = set()
     for i in range(len(prg[1])):
         if prg[1][i] == 'var':
             vars |= {prg[1][i+1]}
-    #vars = set([x[1] for x in prg[1]])
-    #print(vars)
     vars |= i_vars(prg[2]) # |= = union dans un set
     vars |= {prg[3][1]}
     return vars
 
 def e_vars(expr):
-    #print(expr[0])
     if expr[0] == 'var':
         return { expr[1] }
     if expr[0] == 'nb':
         return set()
     if expr[0] == 'opbin':
         return e_vars(expr[1])|e_vars(expr[3])
-    #if expr[0] == 'struct':
-        #print(expr[1])
-        #return { expr[1]+'_'+expr[2] }
     else:
-        #print(expr)
         return set()
 
 def i_vars(instr):
-    #print(instr)
     i = instr[0]
     vars = set()
     if i == 'while' or i == 'if':
@@ -319,33 +287,20 @@ def i_vars(instr):
         vars |= i_vars(instr[1])
         vars |= i_vars(instr[2])
     elif i == 'affect':
-        #print(instr)
         vars |= lhs_vars(instr[1])
         vars |= lhs_vars(instr[2])
-        #vars |= {instr[1][1]}
-        #vars |= e_vars(instr[2])
     return vars
      
 def lhs_vars(lhs):
-    #print(lhs[0])
     if lhs[0] == 'dot':
-        #print('dot')
         return lhs_vars(lhs[1]) | lhs_vars(lhs[2])
-        #return lhs_vars(lhs[1])
     if lhs[0] == 'struct':
         return { lhs[1]+'_'+lhs[2] }
     if lhs[0] == 'var':
-        #print(lhs[1])
         return e_vars(lhs)
     else:
         return set() 
-        #return e_vars(lhs[1])
 
-    
-    #return set()
-      
-#print(p_vars(x))
-#print(declarations(p_vars(x[2])))
 
 ## Compilation de chaque element
 global cpt_cmp
@@ -388,23 +343,13 @@ def lhs_asm(lhs):
     if lhs[0] == "var":
         return ["mov rbx, "+lhs[1]]
     
-    #if lhs[0] == "struct":
-    #    return position_dans_struct(lhs[1], lhs[2])
-    
     if lhs[0] == "dot":
         pt_struct = struct_lhs(lhs)[0]+"_"+struct_lhs(lhs)[1]
         delta = str(position_dans_struct(struct_lhs(lhs)[0],attribut_affect(lhs)))
         pos = pt_struct+"+"+delta
         return ["mov rbx, "+pos]
-        #return lhs[1][1]+"_"+lhs[1][2] + position_dans_struct(lhs[1][1], lhs[2][1])
-        
-        #res = ["mov rax, "+lhs[1][1]+"_"+lhs[1][2]]
-        #res.append(lhs_asm(lhs[2]))
     else:
-        return
-    
-#print(lhs_asm[])
-    
+        return    
     
 def i_asm(instr):
     global cptinstr
@@ -463,8 +408,7 @@ def p_asm(prg):
 
 print(p_asm(x))
         
-#print(p_vars(x[2]))
-#print(declarations(p_vars(x[2])))
+
      
      
 
