@@ -307,7 +307,10 @@ def p_asm(prg):#par ici les floats
     declarations(p_vars(prg))
     code = code.replace("[CODE]", "\n\t".join( i_asm(prg[2])))
     ret = e_asm(prg[3])
-    ret += ["mov rdi, nombre", "mov rsi, rax", "call printf",] + e_asm(prg[3])
+    if vars[prg[3][1]] == 'int':
+        ret += ["mov rdi, entier", "mov rsi, rax", "call printf",] + e_asm(prg[3])
+    elif vars[prg[3][1]] == 'float':
+        ret += ["mov rdi, flotant",'cvttss2si rax, xmm0' ,"mov rsi, rax ", "call printf",] + e_asm(prg[3])
     code = code.replace("[RETURN]", "\n\t".join(ret))
     init_vars = ""
     N = len(prg[1])
@@ -334,9 +337,7 @@ def e_type(expr):
 programme = '''
 main(float a){
     float b;
-    float c;
-    c = 212.15;
-    b = 2 + c;
+    b = 212.15;
     return b;
 }
 '''
