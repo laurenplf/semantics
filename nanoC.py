@@ -10,7 +10,7 @@ def declarations(vars):
             #for i in range (1,int(v[1])):
              #   decls=decls + [',0']
             decls = decls+['%s_len:\tdq 10' % v[0]]
-        elif 'tableau' not in v:
+        else:
             decls = decls+['%s:\tdq 0' % v]
     return "\n".join(decls)
     
@@ -55,26 +55,7 @@ class NanoCLexer(Lexer):
 
 
 programme = '''
-main(a){
-    int tableau[4]={5,4,3,2};
-    n=len(tableau);
-    inversion=1;
-    i=0;
-    while(inversion>0){
-        inversion=0;
-        while (i<n){
-            vala=tableau[i];
-            valb=tableau[i+1];
-            if (tableau[i+1]<tableau[i]){
-                inversion=1;
-                tableau[i]=valb;
-                tableau[i+1]=vala;
-            i=i+1;
-        }
-    }
-}
-return tableau;
-} ''' 
+main(a){int l[6]={1,2,3,4,5,6};l[2]=5; return l;} ''' 
 
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
@@ -209,8 +190,16 @@ def p_vars(prg):
     vars = set([x[1] for x in prg[1]])
     #print(vars)
     vars |= i_vars(prg[2]) # |= = union dans un set
-    vars |= {prg[3][1]}
-    return vars
+    declaration=True
+    for v in vars: # sinon double definition de la liste si "return list" car ici, "list" est une variable
+        if len(v)==2 and prg[3][1] == v[0]:
+            declaration=False 
+    if (declaration):
+        vars |= {prg[3][1]}
+        return vars
+    else:
+        return vars
+    
 
 def e_vars(expr):
     if expr[0] == 'var':
