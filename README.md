@@ -1,6 +1,6 @@
 # semantics
 
-# # Partie sur les tableaux 
+## Partie sur les tableaux 
 
 Le programme peut gérer les lignes suivantes: 
 - int id[nbr]; 
