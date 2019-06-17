@@ -264,4 +264,73 @@ def expr_dump(expr):
         return expr[1]
     return 'pb'
 
+def hachage(varDic, instr):
+    """Fonction de hachage pour repérer deux opérations identiques"""
+    a = varDic[instr[1][1]]
+    b = varDic[instr[3][1]]
+    return opbinDic[instr[2]] + 10*min(a,b) + 1000*max(a,b)
+    
+ 
+
+def optiLocal(instr):
+    """Optimisation des blocs de base"""
+    varDic = {'indice':0}
+    tableHachage = dict()
+    addInstr(instr, varDic, tableHachage)           
+    return instr
+
+def addInstr(instr, varDic, tableHachage):
+    """Ajoute une instruction à la table de hachage :
+        - Ajoute les nouvelles variables éventuelles dans varDic
+        - Ajoute les opérations à la table de hachage """
+    
+    if instr[0] == 'affect':        
+        addVar(instr[1], varDic)
+        if instr[2][0] == 'opbin':
+            addOpbin(instr, varDic, tableHachage)
+        elif instr[2][0] == 'var':
+            addVar(instr[2], varDic)
+            varDic[instr[2][1]] = instr[1][1]
+            delOpbin(instr[2][1], varDic, tableHachage)
+            
+    elif instr[0] == 'seq':
+        addInstr(instr[1], varDic, tableHachage)
+        addInstr(instr[2], varDic, tableHachage)
+    return
+
+def addVar(var, varDic):
+    """Ajout des variables indicées"""
+    if not var[1] in varDic:
+        varDic['indice'] += 1
+        varDic[var[1]] = varDic['indice']
+    return
+    
+def addOpbin(instr, varDic, tableHachage):
+    """Ajout des opérations dans la table de hachage"""
+    indice = hachage(varDic, instr[2])
+    if not indice in tableHachage :
+        tableHachage[indice] = [instr]
+    else : 
+        instr[2] = tableHachage[indice][0][1]
+        tableHachage[indice].append(instr)
+        
+def codeToCFG(parser):
+    """Transforme le programme en Control Flow Graph"""
+    return
+
+def optiCFG(graph):
+    """Transforme le CFG en graph sans code mort avec des blocs de base 
+    optimisés"""
+    return
+
+def CFGtoCode(graph):
+    """Retourne les instructions correspondant au Control Flow Graph"""
+    return
+    
+def optiGlobal(parser):
+    """Optimise le code parsé"""
+    graph = codeToCFG(parser)
+    optiCFG(graph)   
+    return CFGtoCode(graph)
+
 #print(expr_dump(x))
