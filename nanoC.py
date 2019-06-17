@@ -331,8 +331,8 @@ def i_asm(instr):
     elif i == 'dec_tableau':
         st.append("mov rax ,"+ str(instr[2]))
         st.append("mov [" + str(instr[1]) + "_len] , rax")
-        if len(i)==3: 
-            st.append(str(instr[1][1])+":")
+        if len(instr)>3: 
+            st.append(str(instr[1])+":")
             for j in range (0,len(instr[3])):
                 st.append(".long "+ str(instr[3][j][1]))
     return st 
