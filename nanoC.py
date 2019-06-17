@@ -338,7 +338,7 @@ def i_asm(instr):
         st.append("jzfin" +str(cptinstr_cur)+":")        
          
     elif i == 'dec_tableau':
-        st.append("mov " + str(instr[1]) + "_len," +str(instr[2]))
+        st.append("mov [" + str(instr[1]) + "_len] ," +str(instr[2]))
         if len(i)==3: 
             st.append(str(instr[1][1])+":")
             for j in range (0,len(instr[3])):
