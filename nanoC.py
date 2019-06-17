@@ -1,14 +1,34 @@
 from sly import Lexer, Parser
 import sys
 
-def declarations(vars):
-    decls = ['%s:\tdq 0' % v for v in vars]
+
+def expr_dump(expr):
+    if (expr[0] == 'opbin'):
+        return "(" + expr_dump(expr[1]) + " " + expr[2] + " " + expr_dump(expr[3]) + ")"
+    elif (expr[0] == 'lt'):
+        return "(" + expr_dump(expr[1]) + " < " + expr_dump(expr[2]) + ")"
+    elif (expr[0] == 'lte'):
+        return "(" + expr_dump(expr[1]) + " <= " + expr_dump(expr[2]) + ")"
+    elif (expr[0] == 'gt'):
+        return "(" + expr_dump(expr[1]) + " > " + expr_dump(expr[2]) + ")"
+    elif (expr[0] == 'gte'):
+        return "(" + expr_dump(expr[1]) + " >= " + expr_dump(expr[2]) + ")"
+    elif (expr[0] == 'var'):
+        return expr[1]
+    elif (expr[0] == 'nb'):
+        return expr[1]
+    return 'pb'
+
+
+def declarations(variables):
+    decls = ['%s:\tdq 0' % v[0] for v in vars.keys()]
+
     return "\n".join(decls)
 
 class NanoCLexer(Lexer):
 
     tokens = { OPBIN, ID, WHILE, MAIN, IF, NUMBER, LBRACE, RBRACE, LPAREN, RPAREN,
-               SEMICOLON, COMMA, EQUAL, LTE, LT, GTE, GT, RETURN, INT, FLOAT }
+               SEMICOLON, COMMA, EQUAL, LTE, LT, GTE, GT, RETURN, INT, FLOAT, POINT }
 
     ignore = ' \t\n'
 
@@ -31,6 +51,7 @@ class NanoCLexer(Lexer):
     GT = r'>'
     INT = r'int'
     FLOAT = r'float'
+    POINT = r'\.'
 
     @_(r'[a-z]+')
     def ID(self, t):
@@ -53,7 +74,7 @@ class NanoCParser(Parser):
 
     @_('MAIN LPAREN varlist RPAREN LBRACE RETURN expr SEMICOLON RBRACE')
     def prog(self, p):
-        return 'prog', p[2],' ', p[6]
+        return 'prog', p[2],'No Instructions', p[6]
 
     @_('instr instr')
     def instr(self, p):
@@ -65,11 +86,11 @@ class NanoCParser(Parser):
 
     @_('INT ID SEMICOLON')
     def instr(self, p):
-        return 'define', ('var', p[1],'int')
+        return 'declare', ('var', p[1],'int')
 
     @_('FLOAT ID SEMICOLON')
     def instr(self, p):
-        return 'define', ('var', p[1],'float')
+        return 'declare', ('var', p[1],'float')
 
     @_('ID EQUAL expr SEMICOLON')
     def instr(self, p):
@@ -109,7 +130,11 @@ class NanoCParser(Parser):
 
     @_('NUMBER')
     def expr(self, p):
-        return 'nb', p[0]
+        return 'nb', p[0],'int'
+
+    @_('NUMBER POINT NUMBER')
+    def expr(self, p):
+        return 'nb', p[0]+'.'+p[2],'float'
 
     @_('ID')
     def expr(self, p):
@@ -130,15 +155,19 @@ class NanoCParser(Parser):
     @_('FLOAT ID COMMA varlist')
     def varlist(self, p):
         return (('var', p[1],'float'),) + p[3]
+global vars
+vars= {}
+varsTotal = set()
 
 def p_vars(prg):
-    vars = set([x[1] for x in prg[1]])
+    for x in prg[1]:
+        vars[x[1]]=x[2]
     #print(vars)
-    vars |= i_vars(prg[2]) # |= = union dans un set
-    vars |= {prg[3][1]}
-    return vars
+    i_vars(prg[2]) # |= = union dans un set
 
 def e_vars(expr):
+
+    print(">>EXPR:",expr)
     if expr[0] == 'var':
         return { expr[1] }
     if expr[0] == 'nb':
@@ -150,19 +179,21 @@ def e_vars(expr):
         return set()
 
 def i_vars(instr):
-    #print(instr)
+
+    global varsTotal
     i = instr[0]
-    vars = set()
-    if i == 'while' or i == 'if':
-        vars |= e_vars(instr[1])
-        vars |= i_vars(instr[2])
+    if i == 'declare':
+        vars[instr[1][1]] = instr[1][2]
     elif i == 'seq':
-        vars |= i_vars(instr[1])
-        vars |= i_vars(instr[2])
+        i_vars(instr[1])
+        i_vars(instr[2])
+    elif i == 'while' or i == 'if':
+        varsTotal |= e_vars(instr[1])
+        i_vars(instr[2])
     elif i == 'affect':
-        vars |= {instr[1][1]}
-        vars |= e_vars(instr[2])
-    return vars
+        varsTotal |= {instr[1][1]}
+        varsTotal |= e_vars(instr[2])
+    print(">>variable",vars)
 
 global cpt_cmp
 global cptinstr
@@ -171,34 +202,62 @@ cpt_cmp = 0
 i_test = {"lt":"jl", "lte":"jle", "gt":"jg", "gte":"jge"}
 
 def e_asm(expr):
+    print(">>EXPR:",expr)
     global cpt_cmp
-    if expr[0] == 'nb':
-        return ["mov rax, " + expr[1]]
-    elif expr[0] == 'var':
-        return ["mov rax, [" + expr[1] + "]"]
-    elif expr[0] == 'opbin':
+    if e_type(expr) == 'int':
+        if expr[0] == 'nb':
+            return ["mov rax, " + expr[1]]
+        elif expr[0] == 'var':
+            return ["mov rax, [" + expr[1] + "]"]
+        elif expr[0] == 'opbin':
+            e_fin = "fin_cmp_%s" % cpt_cmp
+            e_saut = "cmp_%s" % cpt_cmp
+            cpt_cmp += 1
 
-        e_fin = "fin_cmp_%s" % cpt_cmp
-        e_saut = "cmp_%s" % cpt_cmp
-        cpt_cmp += 1
+            res = e_asm(expr[3])
+            res.append("push rax")
+            res += e_asm(expr[1])
+            res.append("pop rbx")
 
-        res = e_asm(expr[3])
-        res.append("push rax")
-        res += e_asm(expr[1])
-        res.append("pop rbx")
+            if expr[2] == '+':
+                res.append("add rax, rbx")
+            elif expr[2] == '-':
+                res.append("sub rax, rbx")
+            else:
+                res.append("cmp rax, rbx")
+                res.append(i_test[expr[2]] + " "+ e_saut)
+                res.append("mov rax, 0")
+                res.append("jmp %s" % e_fin)
+                res.append("\n%s:\n\tmov rax, 1" % e_saut)
+                res.append("\n%s:" % e_fin)
+            return res
+    if e_type(expr) == 'float':
+        if expr[0] == 'nb':
+            return ["movss xmm0, " + expr[1]]#si le nombre est entier
+        elif expr[0] == 'var':
+            return ["movss xmm0, [" + expr[1] + "]"]#si la variable est d'un autre type
+        elif expr[0] == 'opbin':
+            e_fin = "fin_cmp_%s" % cpt_cmp
+            e_saut = "cmp_%s" % cpt_cmp
+            cpt_cmp += 1
 
-        if expr[2] == '+':
-            res.append("add rax, rbx")
-        elif expr[2] == '-':
-            res.append("sub rax, rbx")
-        else:
-            res.append("cmp rax, rbx")
-            res.append(i_test[expr[2]] + " "+ e_saut)
-            res.append("mov rax, 0")
-            res.append("jmp %s" % e_fin)
-            res.append("\n%s:\n\tmov rax, 1" % e_saut)
-            res.append("\n%s:" % e_fin)
-        return res
+            res = e_asm(expr[3])
+            res.append("push xmm0")
+            res += e_asm(expr[1])
+            res.append("pop xmm1")
+
+            if expr[2] == '+':
+                res.append("addss xmm0, xmm1")
+            elif expr[2] == '-':
+                res.append("subss xmm0, xmm1")
+            else:#par iciiiiiiiiiii
+                res.append("cmp rax, rbx")
+                res.append(i_test[expr[2]] + " "+ e_saut)
+                res.append("mov rax, 0")
+                res.append("jmp %s" % e_fin)
+                res.append("\n%s:\n\tmov rax, 1" % e_saut)
+                res.append("\n%s:" % e_fin)
+            return res
 
 def i_asm(instr):
     global cptinstr
@@ -230,7 +289,7 @@ def i_asm(instr):
         cptinstr += 1
     return st
 
-def p_asm(prg):
+def p_asm(prg):#par ici les floats
     code = open("moule.asm").read()
     code = code.replace("[DECLS_VARS]", declarations(p_vars(prg)))
     code = code.replace("[CODE]", "\n\t".join( i_asm(prg[2])))
@@ -247,20 +306,32 @@ def p_asm(prg):
     code = code.replace("[INIT_VARS]", init_vars)
     return code
 
-
-programme1 = '''
-main(a,b,c){
-    a = c;
-    while(a < 1){
-        a = a + 1;
-        b = b - 1;
-    }
-    return a;
-}'''
+def e_type(expr):
+    intFlag = 0
+    if expr[0] == "opbin":
+        if e_type(expr[1]) == "float" or e_type(expr[3]) == "float":
+            return "float"
+        return "int"
+    elif expr[0] == "nb":
+        return expr[2]
+    elif expr[0] == "var":
+        return(vars[expr[1]])
 
 programme = '''
-main(int a){
+main(float a,float b){
+    float c;
+    c = a + b;
+    return c;
+}
+'''
 
+programme1 = '''
+main(int a){
+    int b;
+    b = 5;
+    while(b < a){
+        b = b +1;
+    }
     return a;
 }
 '''
@@ -273,33 +344,13 @@ parser = NanoCParser()
 x = parser.parse(lexer.tokenize(programme))
 #print("x = %s" % str(x))
 #
-for k in x:
-    print(k)
+for k in range(4):
+    print(">>prog[%s]: " %k,x[k])
 
-
-
-print(x)
 chaine = p_asm(x)
+print(">>P_VARS:",p_vars(x))
 f = open("result.asm", "w")
 f.write(chaine)
 f.close()
-print(e_asm(x[3]))
-
-def expr_dump(expr):
-    if (expr[0] == 'opbin'):
-        return "(" + expr_dump(expr[1]) + " " + expr[2] + " " + expr_dump(expr[3]) + ")"
-    elif (expr[0] == 'lt'):
-        return "(" + expr_dump(expr[1]) + " < " + expr_dump(expr[2]) + ")"
-    elif (expr[0] == 'lte'):
-        return "(" + expr_dump(expr[1]) + " <= " + expr_dump(expr[2]) + ")"
-    elif (expr[0] == 'gt'):
-        return "(" + expr_dump(expr[1]) + " > " + expr_dump(expr[2]) + ")"
-    elif (expr[0] == 'gte'):
-        return "(" + expr_dump(expr[1]) + " >= " + expr_dump(expr[2]) + ")"
-    elif (expr[0] == 'var'):
-        return expr[1]
-    elif (expr[0] == 'nb'):
-        return expr[1]
-    return 'pb'
-
+print(chaine)
 #print(expr_dump(x[2][2][1]))
