@@ -306,15 +306,15 @@ def i_asm(instr):
             st += e_asm(instr[2])
             st.append("pop rbx")
             st.append("mov [rbx], rax")
-        elif instr[2][0]=='len':
+        elif 'len' in instr[2]:
             st.append("mov ["+ str(instr[1])+"], "+ str(instr[2][1])+"_len")
-        elif instr[2][0]=='tableau': #id a gauche
+        elif 'tableau' in instr[2]: #id a gauche
             st += e_asm(instr[2])
             st.append("pop rbx")
             st.append("mov ["+ str(instr[1])+"], rbx") # a voir 
         else:
             st += e_asm(instr[2]) 
-            st.append("mov [" + str(instr[1][1]) + "], rax")
+            st.append("mov [" + str(instr[1]) + "], rax") 
     elif i == 'seq':
         st += i_asm(instr[1])
         st += i_asm(instr[2])
