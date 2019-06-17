@@ -10,7 +10,7 @@ def declarations(vars):
             #for i in range (1,int(v[1])):
              #   decls=decls + [',0']
             decls = decls+['%s_len:\tdq 10' % v[0]]
-        else:
+        elif 'tableau' not in v:
             decls = decls+['%s:\tdq 0' % v]
     return "\n".join(decls)
     
