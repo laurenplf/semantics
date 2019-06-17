@@ -308,7 +308,9 @@ def i_asm(instr):
             st.append("pop rbx")
             st.append("mov [rbx], rax")
         elif 'len' in instr[2]:
-            st.append("mov ["+ str(instr[1])+"], "+ str(instr[2][1])+"_len")
+            st+=e_asm(instr[2]);
+            st.append("mov ["+instr[1]+"] , rax")
+            #st.append("mov ["+ str(instr[1])+"], "+ str(instr[2][1])+"_len")
         elif 'tableau' in instr[2]: #id a gauche
             st += e_asm(instr[2])
             st.append("pop rbx")
@@ -338,7 +340,8 @@ def i_asm(instr):
         st.append("jzfin" +str(cptinstr_cur)+":")        
          
     elif i == 'dec_tableau':
-        st.append("mov [" + str(instr[1]) + "_len] ," +str(instr[2]))
+        st.append("mov rax ,"+ str(instr[2]))
+        st.append("mov [" + str(instr[1]) + "_len] , rax")
         if len(i)==3: 
             st.append(str(instr[1][1])+":")
             for j in range (0,len(instr[3])):
