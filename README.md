@@ -12,8 +12,7 @@ Le programme peut gérer les lignes suivantes:
 Avec un première programme simple: '''main(a){int l[6]={1,2,3,4,5,6};l[2]=5; return a;}'''
 
 Puis avec un programme effectuant le tri à bulle d'un tableau : 
-
-void tri_bulle(tableau){
+tri_bulle(tableau){
     n=len(tableau);
     inversion=1;
     i=0;
