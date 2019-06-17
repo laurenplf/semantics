@@ -10,6 +10,12 @@ def declarations(vars):
             #for i in range (1,int(v[1])):
              #   decls=decls + [',0']
             decls = decls+['%s_len:\tdq 10' % v[0]]
+        elif len(v)==3:
+            vals=str(v[2][0][1])
+            for i in range(1, len(v[2])):
+                vals=vals + "," + str(v[2][i][1])
+            decls=decls + [v[0]+':\tdq '+vals]
+            decls = decls+['%s_len:\tdq 10' % v[0]]
         else:
             decls = decls+['%s:\tdq 0' % v]
     return "\n".join(decls)
@@ -192,7 +198,7 @@ def p_vars(prg):
     vars |= i_vars(prg[2]) # |= = union dans un set
     declaration=True
     for v in vars: # sinon double definition de la liste si "return list" car ici, "list" est une variable
-        if len(v)==2 and prg[3][1] == v[0]:
+        if len(v)>=2 and prg[3][1] == v[0]:
             declaration=False 
     if (declaration):
         vars |= {prg[3][1]}
@@ -232,7 +238,10 @@ def i_vars(instr):
         # else:
             vars |= e_vars(instr[2])
     elif i== 'dec_tableau':
-        vars |= {(instr[1],instr[2])}
+        if len(instr)==3:
+            vars |= {(instr[1],instr[2])}
+        else:
+            vars |= {(instr[1],instr[2],instr[3])}
     return vars
      
       
