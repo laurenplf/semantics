@@ -55,7 +55,8 @@ class NanoCLexer(Lexer):
 
 
 programme = '''
-main(tableau){
+main(a){
+    int tableau[4]={5,4,3,2};
     n=len(tableau);
     inversion=1;
     i=0;
@@ -233,13 +234,13 @@ def i_vars(instr):
         vars |= i_vars(instr[1])
         vars |= i_vars(instr[2])
     elif i == 'affect':
-        if instr[1][0] == 'tableau':
-            vars |= e_vars(instr[1][2])
-        else: 
+        if instr[1][0] != 'tableau':
+            #vars |= e_vars(instr[1][2])
+        #else: 
             vars |= {instr[1]}
-        if instr[2][0]=='tableau':
-            vars |= e_vars(instr[2][2])
-        else:
+        if instr[2][0]!='tableau':
+            #vars |= e_vars(instr[2][2])
+        # else:
             vars |= e_vars(instr[2])
     elif i== 'dec_tableau':
         vars |= {(instr[1],instr[2])}
@@ -327,15 +328,17 @@ def i_asm(instr):
         cptinstr += 1
     elif i == 'while':
         st.append("debut"+str(cptinstr)+ ":")
+        cptinstr_cur=cptinstr #current ctpinstr
+        cptinstr += 1
         st += e_asm(instr[1])
         st.append("cmp rax, 0")
-        st.append("jz jzfin" + str(cptinstr))
+        st.append("jz jzfin" + str(cptinstr_cur))
         st += i_asm(instr[2])
-        st.append("jmp debut" + str(cptinstr))
-        st.append("jzfin" +str(cptinstr)+":")        
-        cptinstr += 1  
+        st.append("jmp debut" + str(cptinstr_cur))
+        st.append("jzfin" +str(cptinstr_cur)+":")        
+         
     elif i == 'dec_tableau':
-        st.append("mov " + instr[1] + "_len, instr[2]")
+        st.append("mov " + str(instr[1]) + "_len," +str(instr[2]))
         if len(i)==3: 
             st.append(str(instr[1][1])+":")
             for j in range (0,len(instr[3])):
