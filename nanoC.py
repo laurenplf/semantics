@@ -54,8 +54,26 @@ class NanoCLexer(Lexer):
 
 
 
-programme = '''main(a){int l[6]={1,2,3,4,5,6};l[2]=5; return a;}'''
-#main(a){int l[6]={1,2,3,4,5,6};l[2]=5; return a;}
+programme = '''
+main(tableau){
+    n=len(tableau);
+    inversion=1;
+    i=0;
+    while(inversion>0){
+        inversion=0;
+        while (i<n){
+            vala=tableau[i];
+            valb=tableau[i+1];
+            if (tableau[i+1]<tableau[i]){
+                inversion=1;
+                tableau[i]=valb;
+                tableau[i+1]=vala;
+            i=i+1;
+        }
+    }
+}
+return tableau;
+} ''' 
 
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
@@ -283,11 +301,17 @@ def i_asm(instr):
     i = instr[0]
     st = []
     if i == "affect": # var = instr[1][1], expr = instr[2] 
-        if i[1][0]=='tableau':
-            st += e_asm(i[1])
-            st += e_asm(i[2])
+        if instr[1][0]=='tableau':
+            st += e_asm(instr[1])
+            st += e_asm(instr[2])
             st.append("pop rbx")
             st.append("mov [rbx], rax")
+        elif instr[2][0]=='len':
+            st.append("mov ["+ str(instr[1])+"], "+ str(instr[2][1])+"_len")
+        elif instr[2][0]=='tableau': #id a gauche
+            st += e_asm(instr[2])
+            st.append("pop rbx")
+            st.append("mov ["+ str(instr[1])+"], rbx") # a voir 
         else:
             st += e_asm(instr[2]) 
             st.append("mov [" + str(instr[1][1]) + "], rax")
