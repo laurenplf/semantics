@@ -1,6 +1,10 @@
 from sly import Lexer, Parser
 import sys
+import struct
 
+def floatToBinary64(num):
+    bits, = struct.unpack('!I', struct.pack('!f', num))
+    return str(int("{:032b}".format(bits),2))
 
 def expr_dump(expr):
     if (expr[0] == 'opbin'):
@@ -21,8 +25,11 @@ def expr_dump(expr):
 
 
 def declarations(variables):
+    global tmp
+    print('>>>>>>>>><<',tmp)
     decls = ['%s:\tdq 0' % v[0] for v in vars.keys()]
-
+    for v in tmp:
+        decls+=[v[1]+':\tdq '+v[2]]
     return "\n".join(decls)
 
 class NanoCLexer(Lexer):
@@ -157,12 +164,12 @@ class NanoCParser(Parser):
         return (('var', p[1],'float'),) + p[3]
 global vars
 vars= {}
+tmp =  []
 varsTotal = set()
 
 def p_vars(prg):
     for x in prg[1]:
         vars[x[1]]=x[2]
-    #print(vars)
     i_vars(prg[2]) # |= = union dans un set
 
 def e_vars(expr):
@@ -199,11 +206,14 @@ global cpt_cmp
 global cptinstr
 cptinstr = 0
 cpt_cmp = 0
+cpt_tmp = 0
 i_test = {"lt":"jl", "lte":"jle", "gt":"jg", "gte":"jge"}
 
 def e_asm(expr):
     print(">>EXPR:",expr)
     global cpt_cmp
+    global cpt_tmp
+    global tmp
     if e_type(expr) == 'int':
         if expr[0] == 'nb':
             return ["mov rax, " + expr[1]]
@@ -233,7 +243,9 @@ def e_asm(expr):
             return res
     if e_type(expr) == 'float':
         if expr[0] == 'nb':
-            return ["movss xmm0, " + expr[1]]#si le nombre est entier
+            cpt_tmp += 1
+            tmp.append(['nb','tmp'+str(cpt_tmp),floatToBinary64(float(expr[1]))])
+            return ["movss xmm0, [" +'tmp'+str(cpt_tmp)+']' ]#si le nombre est entier
         elif expr[0] == 'var':
             return ["movss xmm0, [" + expr[1] + "]"]#si la variable est d'un autre type
         elif expr[0] == 'opbin':
@@ -242,13 +254,14 @@ def e_asm(expr):
             cpt_cmp += 1
 
             res = e_asm(expr[3])
-            res.append("push xmm0")
+            res.append("movss xmm1,xmm0")
             res += e_asm(expr[1])
-            res.append("pop xmm1")
 
             if expr[2] == '+':
+                res.append("cvtsi2ss xmm0, rax")
                 res.append("addss xmm0, xmm1")
             elif expr[2] == '-':
+                res.append("cvtsi2ss xmm0, rax")
                 res.append("subss xmm0, xmm1")
             else:#par iciiiiiiiiiii
                 res.append("cmp rax, rbx")
@@ -291,7 +304,7 @@ def i_asm(instr):
 
 def p_asm(prg):#par ici les floats
     code = open("moule.asm").read()
-    code = code.replace("[DECLS_VARS]", declarations(p_vars(prg)))
+    declarations(p_vars(prg))
     code = code.replace("[CODE]", "\n\t".join( i_asm(prg[2])))
     ret = e_asm(prg[3])
     ret += ["mov rdi, nombre", "mov rsi, rax", "call printf",] + e_asm(prg[3])
@@ -304,6 +317,7 @@ def p_asm(prg):#par ici les floats
         iv[4] = iv[4].replace("VAR", prg[1][i][1])
         init_vars += "\n\t"+ "\n\t".join(iv)
     code = code.replace("[INIT_VARS]", init_vars)
+    code = code.replace("[DECLS_VARS]", declarations(p_vars(prg)))
     return code
 
 def e_type(expr):
@@ -318,10 +332,12 @@ def e_type(expr):
         return(vars[expr[1]])
 
 programme = '''
-main(float a,float b){
+main(float a){
+    float b;
     float c;
-    c = a + b;
-    return c;
+    c = 212.15;
+    b = 2 + c;
+    return b;
 }
 '''
 
