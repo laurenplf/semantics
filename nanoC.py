@@ -41,7 +41,8 @@ class NanoCLexer(Lexer):
 
 
 
-programme = '''main(a,b,c){a = c; while(a < 1){a = a + 1;b = b - 1;} return a;}'''
+programme = '''main(a,b,c){a = c; while(a < 1){a = a + 1; if(a > 4){b = b - 1;} c= a + 1;} a= a+3; a=b+2; return a;}'''
+
 
 lexer = NanoCLexer()
 toks = lexer.tokenize(programme)
@@ -161,8 +162,6 @@ def i_vars(instr):
     return vars
 
 
-print(p_vars(x))
-
 global cpt_cmp
 global cptinstr
 cptinstr = 0
@@ -245,7 +244,7 @@ def p_asm(prg):
     code = code.replace("[INIT_VARS]", init_vars)
     return code
 
-print(p_asm(x))
+#print(p_asm(x))
         
 def expr_dump(expr):
     if (expr[0] == 'opbin'):
@@ -264,11 +263,14 @@ def expr_dump(expr):
         return expr[1]
     return 'pb'
 
+#print(expr_dump(x))
+opbinDic = {'+':0, '-':1, 'lte':2, 'lt':3, 'gte':4, 'gt':5}
+
 def hachage(varDic, instr):
     """Fonction de hachage pour repérer deux opérations identiques"""
     a = varDic[instr[1][1]]
     b = varDic[instr[3][1]]
-    return opbinDic[instr[2]] + 10*min(a,b) + 1000*max(a,b)
+    return opbin[instr[2]] + 10*min(a,b) + 1000*max(a,b)
     
  
 
@@ -291,7 +293,7 @@ def addInstr(instr, varDic, tableHachage):
         elif instr[2][0] == 'var':
             addVar(instr[2], varDic)
             varDic[instr[2][1]] = instr[1][1]
-            delOpbin(instr[2][1], varDic, tableHachage)
+            delOpbin(instr, varDic, tableHachage)
             
     elif instr[0] == 'seq':
         addInstr(instr[1], varDic, tableHachage)
@@ -313,11 +315,55 @@ def addOpbin(instr, varDic, tableHachage):
     else : 
         instr[2] = tableHachage[indice][0][1]
         tableHachage[indice].append(instr)
-        
-def codeToCFG(parser):
-    """Transforme le programme en Control Flow Graph"""
     return
 
+def delOpbin(instr, varDic, tableHachage):
+    return
+    
+global bloc
+
+def codeToCFG(parser):
+    """Transforme le programme en Control Flow Graph"""
+    global bloc
+    bloc = 0
+    graph = [[[],[]]]
+    findLoop(parser[2], graph)
+    lastBloc = len(graph) -1 
+    graph[lastBloc][0].append(parser[3])
+    return graph
+
+def findLoop(instr, graph):
+    """Retourne le graph complété par l'instruction instr
+    Ajoute les boucles existantes en indentant le numéro de bloc"""
+    global bloc
+    currentBloc = bloc
+    if instr[0] == 'seq' :
+        findLoop(instr[1], graph)
+        findLoop(instr[2], graph)
+    elif instr[0] == 'affect' :
+        graph[bloc][0].append(instr)
+    elif instr[0] == 'if' or instr[0] == 'while': 
+        graph[bloc][0].append(instr[1])
+        bloc += 1
+        graph.append([[],[]])
+        graph[currentBloc][1].append(bloc)
+        findLoop(instr[2], graph)
+        graph[currentBloc][1].append(bloc+1)
+        currentBloc = bloc
+        bloc += 1
+        graph.append([[],[]])
+        graph[currentBloc][1].append(bloc)
+    return graph
+
+graph = codeToCFG(x)
+print("\n")
+print(programme)
+for i in graph :
+    print("\n")
+    print(i)
+
+
+        
 def optiCFG(graph):
     """Transforme le CFG en graph sans code mort avec des blocs de base 
     optimisés"""
@@ -326,6 +372,9 @@ def optiCFG(graph):
 def CFGtoCode(graph):
     """Retourne les instructions correspondant au Control Flow Graph"""
     return
+
+
+        
     
 def optiGlobal(parser):
     """Optimise le code parsé"""
@@ -333,4 +382,8 @@ def optiGlobal(parser):
     optiCFG(graph)   
     return CFGtoCode(graph)
 
-#print(expr_dump(x))
+
+
+
+
+
