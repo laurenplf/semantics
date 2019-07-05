@@ -248,22 +248,28 @@ def p_asm(prg):
         
 def expr_dump(expr):
     if (expr[0] == 'opbin'):
-        return "(" + expr_dump(expr[1]) + " " + expr[2] + " " + expr_dump(expr[3]) + ")"
-    elif (expr[0] == 'lt'):
-        return "(" + expr_dump(expr[1]) + " < " + expr_dump(expr[2]) + ")"
-    elif (expr[0] == 'lte'):
-        return "(" + expr_dump(expr[1]) + " <= " + expr_dump(expr[2]) + ")"
-    elif (expr[0] == 'gt'):
-        return "(" + expr_dump(expr[1]) + " > " + expr_dump(expr[2]) + ")"
-    elif (expr[0] == 'gte'):
-        return "(" + expr_dump(expr[1]) + " >= " + expr_dump(expr[2]) + ")"
+        return  expr_dump(expr[1]) + " " + expr_dump(expr[2]) + " " + expr_dump(expr[3])
+    elif (expr == 'lt'):
+        return "<"
+    elif (expr == 'lte'):
+        return "<="
+    elif (expr == 'gt'):
+        return ">"
+    elif (expr == 'gte'):
+        return ">="
+    elif (expr == '+'):
+        return '+'
+    elif (expr == '-'):
+        return '-'
     elif (expr[0] == 'var'):
         return expr[1]
     elif (expr[0] == 'nb'):
         return expr[1]
-    return 'pb'
+    return "pb"
 
 #print(expr_dump(x))
+    
+
 opbinDic = {'+':0, '-':1, 'lte':2, 'lt':3, 'gte':4, 'gt':5}
 
 def hachage(varDic, instr):
@@ -325,11 +331,13 @@ global bloc
 def codeToCFG(parser):
     """Transforme le programme en Control Flow Graph"""
     global bloc
-    bloc = 0
+    bloc = 1
     graph = [[[],[]]]
+    graph[0][0] = parser[1]
+    graph.append([[],[]])
     findLoop(parser[2], graph)
     lastBloc = len(graph) -1 
-    graph[lastBloc][0].append(parser[3])
+    graph[lastBloc][1].append(parser[3])
     return graph
 
 def findLoop(instr, graph):
@@ -343,6 +351,7 @@ def findLoop(instr, graph):
     elif instr[0] == 'affect' :
         graph[bloc][0].append(instr)
     elif instr[0] == 'if' or instr[0] == 'while': 
+        graph[bloc][0].append(instr[0])
         graph[bloc][0].append(instr[1])
         bloc += 1
         graph.append([[],[]])
@@ -358,9 +367,9 @@ def findLoop(instr, graph):
 graph = codeToCFG(x)
 print("\n")
 print(programme)
-for i in graph :
+"""for i in graph :
     print("\n")
-    print(i)
+    print(i)"""
 
 
         
@@ -371,9 +380,43 @@ def optiCFG(graph):
 
 def CFGtoCode(graph):
     """Retourne les instructions correspondant au Control Flow Graph"""
-    return
+    programme = "main("
+    global bloc
+    bloc = 1
+    n = len(graph[0][0])-1
+    for i in range(n):
+        programme += expr_dump(graph[0][0][i]) +","
+    programme += expr_dump(graph[0][0][n]) +"){"
+    while bloc < len(graph):
+        if (len(graph[1][1]) == 2):
+            programme += transfInstr(graph, graph[bloc])
+        else : 
+            programme += transfInstr(graph, graph[bloc])
+        bloc += 1
+    programme += "return " + expr_dump(graph[len(graph)-1][1][0]) +";}"
+    return programme
 
+def transfInstr(graph, instrL):
+    """Retourne la chaine de caractère associé à liste d'instruction"""
+    programme = ""
+    global bloc
+    for instr in instrL[0]:
+        if instr == 'while' or instr == 'if':
+            programme += instr + "(" + expr_dump(instrL[0][len(instrL[0])-1]) + "){"
+            bloc += 1
+            return programme + transfInstr(graph, graph[bloc])
+        else :    
+            programme += instr_dump(instr)
+    if (bloc == len(graph)-1):
+        return programme            
+    return programme + "}"   
+    
+def instr_dump(instr):
+    """Retourne la chaine de caractère d'une instruction"""
+    return expr_dump(instr[1]) + " = " + expr_dump(instr[2]) + "; "
 
+print("\n")
+print(CFGtoCode(graph))
         
     
 def optiGlobal(parser):
