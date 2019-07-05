@@ -367,16 +367,13 @@ def findLoop(instr, graph):
 graph = codeToCFG(x)
 print("\n")
 print(programme)
-"""for i in graph :
+for i in graph :
     print("\n")
-    print(i)"""
+    print(i)
 
 
         
-def optiCFG(graph):
-    """Transforme le CFG en graph sans code mort avec des blocs de base 
-    optimisés"""
-    return
+
 
 def CFGtoCode(graph):
     """Retourne les instructions correspondant au Control Flow Graph"""
@@ -418,13 +415,104 @@ def instr_dump(instr):
 print("\n")
 print(CFGtoCode(graph))
         
+
+
+# AVAILin(b) = ensemble des expressions disponibles en entrée de b
+# KILL(b) = ensemble des variables tuées/définies par b
+# NKILL(b) = ensemble des expressions de AVAILin(b) non tuées par b, calculé à partir de AVAILin(b) et KILL(b)
+# GEN(b) = ensemble des expressions définies par b et non tuées dans b après leur définition
+# AVAILout(b) = ensemble des expressions disponibles en sortie de b qui vaut NKILL(b) U GEN(b)
+
+
+
+def calculGeneral(graph):
+    """"Calcul des ensembles définies précédemment pour tous les blocs"""
+    n = len(graph)
+    DEF = [[] for i in range(n)]
+    KILLED = [[] for i in range(n)]
+    NKILL = [[] for i in range(n)]
+    AVAILin = [[] for i in range(n)]
+    AVAILout = [[] for i in range(n)]
+    for bloc in range(1,n):
+        AVAILin[bloc] = list(AVAILout[bloc-1])
+        DEF[bloc], KILLED[bloc], NKILL[bloc] = calculGenKilledNKilled(graph, bloc,AVAILin[bloc])
+        AVAILout[bloc] = DEF[bloc].union(NKILL[bloc])
+    return DEF, KILLED, NKILL, AVAILin, AVAILout
+        
+def calculGenKilledNKilled(graph, bloc,AVAILin):
+    """Calcul des ensembles définies précédemment pour un bloc"""
+    DEF = []
+    KILLED =[]
+    n = len(graph[bloc])
+    i = n-1
+    instrL = graph[bloc][0]
+    if len(graph[bloc][1]) == 2:
+        i = i-2
+    while i >= 0 :
+        if estOpbin(instrL[i][2]):
+            y, z = instrL[i][2][1], instrL[i][2][3]
+            if (not y in KILLED) and (not z in KILLED):
+                DEF.append(instrL[i][2])
+        else :
+            if not instrL[i][2] in KILLED:
+                DEF.append(instrL[i][2])
+        KILLED.append(instrL[i][1])
+        i -=1
     
+    NKILL = AVAILin
+    for e in NKILL:
+        for v in e:
+            if estVar(v):
+                if v in KILLED:
+                    NKILL.remove(e)
+    return DEF, KILLED, NKILL
+
+def estOpbin(op):
+    if len(op)==2:
+        if op[0]=='opbin':
+            return True
+    return False
+
+def estVar(v):
+    if len(v) == 2:
+        if v[0] == 'var':
+            return True
+    return False 
+
+# Ces ensembles sont ensuites nécessaires pour différents types d'optimisation
+# que j'ai listé si dessous
+    
+def optiCFG(graph):
+    """Transforme le CFG en graph sans code mort avec des blocs de base 
+    optimisés"""
+    DEF, KILLED, NKILL, AVAILin, AVAILout = calculGeneral(graph)
+    graph = RD(DEF, KILLED, NKILL, AVAILin, AVAILout,graph)
+    graph = VBE(DEF, KILLED, NKILL, AVAILin, AVAILout,graph)
+    graph = Liveness(DEF, KILLED, NKILL, AVAILin, AVAILout,graph)
+    graph = AvailExpr(DEF, KILLED, NKILL, AVAILin, AVAILout,graph)
+    return graph
+
+def RD(DEF, KILLED, NKILL, AVAILin, AVAILout,graph):
+    """Propagation de constante"""
+    return
+
+def VBE(DEF, KILLED, NKILL, AVAILin, AVAILout,graph):
+    """Code hoisting"""
+    return
+
+def Liveness(DEF, KILLED, NKILL, AVAILin, AVAILout,graph):
+    """Dead code elimination"""
+    return
+
+def AvailExpr(DEF, KILLED, NKILL, AVAILin, AVAILout,graph):
+    """Elimination d’expression commune"""
+    return
+
 def optiGlobal(parser):
     """Optimise le code parsé"""
     graph = codeToCFG(parser)
     optiCFG(graph)   
     return CFGtoCode(graph)
-
 
 
 
