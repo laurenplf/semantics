@@ -435,15 +435,19 @@ def calculGeneral(graph):
     AVAILout = [[] for i in range(n)]
     for bloc in range(1,n):
         AVAILin[bloc] = list(AVAILout[bloc-1])
+        for i in range(bloc):
+            if bloc in graph[i][1]:
+                AVAILin[bloc] = list(set(AVAILin[bloc] + AVAILout[i]))
+        
         DEF[bloc], KILLED[bloc], NKILL[bloc] = calculGenKilledNKilled(graph, bloc,AVAILin[bloc])
-        AVAILout[bloc] = DEF[bloc].union(NKILL[bloc])
+        AVAILout[bloc] = list(set(DEF[bloc] + NKILL[bloc]))
     return DEF, KILLED, NKILL, AVAILin, AVAILout
         
 def calculGenKilledNKilled(graph, bloc,AVAILin):
     """Calcul des ensembles définies précédemment pour un bloc"""
     DEF = []
     KILLED =[]
-    n = len(graph[bloc])
+    n = len(graph[bloc][1])
     i = n-1
     instrL = graph[bloc][0]
     if len(graph[bloc][1]) == 2:
@@ -479,6 +483,19 @@ def estVar(v):
             return True
     return False 
 
+print("\n")
+DEF, KILLED, NKILL, AVAILin, AVAILout = calculGeneral(graph)
+print(DEF)
+print("\n")
+print(KILLED)
+print("\n")
+print(NKILL)
+print("\n")
+print(AVAILin)
+print("\n")
+print(AVAILout)
+
+
 # Ces ensembles sont ensuites nécessaires pour différents types d'optimisation
 # que j'ai listé si dessous
     
@@ -513,8 +530,3 @@ def optiGlobal(parser):
     graph = codeToCFG(parser)
     optiCFG(graph)   
     return CFGtoCode(graph)
-
-
-
-
-
