@@ -358,7 +358,7 @@ def findLoop(instr, graph):
         bloc += 1
         graph.append([[instr[0],instr[1]],[bloc+1]])
         findLoop(instr[2], graph)
-        graph[bloc][1] = currentBloc+1
+        graph[bloc][1] = [currentBloc+1]
         graph[currentBloc+1][1].append(bloc+1)
     return graph
 
@@ -377,41 +377,40 @@ def CFGtoCode(graph):
     """Retourne les instructions correspondant au Control Flow Graph"""
     programme = "main("
     global bloc
+    global M
+    M =[]
     bloc = 1
     n = len(graph[0][0])-1
     for i in range(n):
         programme += expr_dump(graph[0][0][i]) +","
     programme += expr_dump(graph[0][0][n]) +"){"
-    while bloc < len(graph):
-        if (len(graph[1][1]) == 2):
-            programme += transfInstr(graph, graph[bloc])
-        else : 
-            programme += transfInstr(graph, graph[bloc])
+    while bloc < len(graph)-1:
+        programme += transfInstr(graph, graph[bloc][0])
         bloc += 1
-    programme += "return " + expr_dump(graph[len(graph)-1][1][0]) +";}"
+    programme += "return " + expr_dump(graph[len(graph)-1][0][0]) +";}"
     return programme
 
 def transfInstr(graph, instrL):
     """Retourne la chaine de caractère associé à liste d'instruction"""
     programme = ""
     global bloc
-    for instr in instrL[0]:
-        if instr == 'while' or instr == 'if':
-            programme += instr + "(" + expr_dump(instrL[0][len(instrL[0])-1]) + "){"
-            bloc += 1
-            return programme + transfInstr(graph, graph[bloc])
-        else :    
-            programme += instr_dump(instr)
-    if (bloc == len(graph)-1):
-        return programme            
-    return programme + "}"   
+    if instrL[0] == 'while' or instrL[0] == 'if':
+        programme += instrL[0] + "(" + expr_dump(instrL[1]) + "){"
+        M.append(graph[bloc][1][1]-1)
+        bloc += 1
+        return programme + transfInstr(graph, graph[bloc][0])
+    else :  
+        programme += instr_dump(instrL[0])
+    if (bloc in M):
+        return programme +"}"           
+    return programme
     
 def instr_dump(instr):
     """Retourne la chaine de caractère d'une instruction"""
     return expr_dump(instr[1]) + " = " + expr_dump(instr[2]) + "; "
 
-#print("\n")
-#print(CFGtoCode(graph))
+print("\n")
+print(CFGtoCode(graph))
         
 
 
