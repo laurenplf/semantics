@@ -353,7 +353,7 @@ def findLoop(instr, graph):
         bloc += 1
         graph.append([[instr[0],instr[1]],[bloc+1]])
         findLoop(instr[2], graph)
-        graph[currentBloc][1].append(bloc+1)
+        graph[currentBloc+1][1].append(bloc+1)
     elif instr[0] == 'while':
         bloc += 1
         graph.append([[instr[0],instr[1]],[bloc+1]])
