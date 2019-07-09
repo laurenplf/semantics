@@ -331,13 +331,11 @@ global bloc
 def codeToCFG(parser):
     """Transforme le programme en Control Flow Graph"""
     global bloc
-    bloc = 1
+    bloc = 0
     graph = [[[],[]]]
     graph[0][0] = parser[1]
-    graph.append([[],[]])
-    findLoop(parser[2], graph)
-    lastBloc = len(graph) -1 
-    graph[lastBloc][1].append(parser[3])
+    findLoop(parser[2], graph) 
+    graph.append([[parser[3]],[]])
     return graph
 
 def findLoop(instr, graph):
@@ -349,19 +347,19 @@ def findLoop(instr, graph):
         findLoop(instr[1], graph)
         findLoop(instr[2], graph)
     elif instr[0] == 'affect' :
-        graph[bloc][0].append(instr)
-    elif instr[0] == 'if' or instr[0] == 'while': 
-        graph[bloc][0].append(instr[0])
-        graph[bloc][0].append(instr[1])
         bloc += 1
-        graph.append([[],[]])
-        graph[currentBloc][1].append(bloc)
+        graph.append([[instr],[bloc+1]])
+    elif instr[0] == 'if' :
+        bloc += 1
+        graph.append([[instr[0],instr[1]],[bloc+1]])
         findLoop(instr[2], graph)
         graph[currentBloc][1].append(bloc+1)
-        currentBloc = bloc
+    elif instr[0] == 'while':
         bloc += 1
-        graph.append([[],[]])
-        graph[currentBloc][1].append(bloc)
+        graph.append([[instr[0],instr[1]],[bloc+1]])
+        findLoop(instr[2], graph)
+        graph[bloc][1] = currentBloc+1
+        graph[currentBloc+1][1].append(bloc+1)
     return graph
 
 graph = codeToCFG(x)
@@ -412,8 +410,8 @@ def instr_dump(instr):
     """Retourne la chaine de caractère d'une instruction"""
     return expr_dump(instr[1]) + " = " + expr_dump(instr[2]) + "; "
 
-print("\n")
-print(CFGtoCode(graph))
+#print("\n")
+#print(CFGtoCode(graph))
         
 
 
@@ -425,14 +423,15 @@ print(CFGtoCode(graph))
 
 
 
-def calculGeneral(graph):
-    """"Calcul des ensembles définies précédemment pour tous les blocs"""
+def calculGeneralForward(graph):
+    """"Calcul des ensembles définies précédemment pour tous les blocs du haut en bas"""
     n = len(graph)
     DEF = [[] for i in range(n)]
     KILLED = [[] for i in range(n)]
     NKILL = [[] for i in range(n)]
     AVAILin = [[] for i in range(n)]
     AVAILout = [[] for i in range(n)]
+    AVAILout[0] = graph[0][0]
     for bloc in range(1,n):
         AVAILin[bloc] = list(AVAILout[bloc-1])
         for i in range(bloc):
@@ -447,7 +446,7 @@ def calculGenKilledNKilled(graph, bloc,AVAILin):
     """Calcul des ensembles définies précédemment pour un bloc"""
     DEF = []
     KILLED =[]
-    n = len(graph[bloc][1])
+    n = len(graph[bloc][0])
     i = n-1
     instrL = graph[bloc][0]
     if len(graph[bloc][1]) == 2:
@@ -483,18 +482,66 @@ def estVar(v):
             return True
     return False 
 
-print("\n")
-DEF, KILLED, NKILL, AVAILin, AVAILout = calculGeneral(graph)
-print(DEF)
-print("\n")
-print(KILLED)
-print("\n")
-print(NKILL)
-print("\n")
-print(AVAILin)
-print("\n")
-print(AVAILout)
+#print("\n")
+#DEF, KILLED, NKILL, AVAILin, AVAILout = calculGeneralForward(graph)
+#print(DEF)
+#print("\n")
+#print(KILLED)
+#print("\n")
+#print(NKILL)
+#print("\n")
+#print(AVAILin)
+#print("\n")
+#print(AVAILout)
 
+def calculGeneralBackward(graph):
+    """"Calcul des ensembles définies précédemment pour tous les blocs du bas en haut"""
+    n = len(graph)
+    DEF = [[] for i in range(n)]
+    USE = [[] for i in range(n)]
+    NKILL = [[] for i in range(n)]
+    AVAILin = [[] for i in range(n+1)]
+    AVAILout = [[] for i in range(n)]
+    print(graph[n-1][1])
+    AVAILin[n] = graph[n-1][1]
+    for bloc in range(n-1,-1,-1):
+        AVAILout[bloc] = list(AVAILin[bloc+1])
+        for i in range(n-1, bloc, -1):
+            if  len(graph[bloc][1]) == 2:
+                AVAILout[bloc] = list(set(AVAILout[bloc] + AVAILout[graph[bloc][1][1]]))
+        
+        DEF[bloc], USE[bloc], NKILL[bloc] = calculGenKilledNKilledBackward(graph, bloc,AVAILout[bloc])
+        AVAILin[bloc] = list(set(USE[bloc] + NKILL[bloc]))
+    return DEF, USE, NKILL, AVAILin, AVAILout
+
+def calculGenKilledNKilledBackward(graph, bloc,AVAILout):
+    """Calcul des ensembles définies précédemment pour un bloc de bas en haut"""
+    DEF = []
+    KILLED =[]
+    USE = []
+    n = len(graph[bloc][0])
+    i = n-1
+    instrL = graph[bloc][0]
+    if len(graph[bloc][1]) == 2:
+        i = i-2
+    while i >= 0 :
+        if estOpbin(instrL[i][2]):
+            y, z = instrL[i][2][1], instrL[i][2][3]
+            if (not y in KILLED) and (not z in KILLED):
+                DEF.append(instrL[i][2])
+        else :
+            if not instrL[i][2] in KILLED:
+                DEF.append(instrL[i][2])
+        KILLED.append(instrL[i][1])
+        i -=1
+    
+    NKILL = AVAILin
+    for e in NKILL:
+        for v in e:
+            if estVar(v):
+                if v in KILLED:
+                    NKILL.remove(e)
+    return DEF, KILLED, NKILL
 
 # Ces ensembles sont ensuites nécessaires pour différents types d'optimisation
 # que j'ai listé si dessous
@@ -502,31 +549,41 @@ print(AVAILout)
 def optiCFG(graph):
     """Transforme le CFG en graph sans code mort avec des blocs de base 
     optimisés"""
-    DEF, KILLED, NKILL, AVAILin, AVAILout = calculGeneral(graph)
+    DEF, KILLED, NKILL, AVAILin, AVAILout = calculGeneralForward(graph)
     graph = RD(DEF, KILLED, NKILL, AVAILin, AVAILout,graph)
     graph = VBE(DEF, KILLED, NKILL, AVAILin, AVAILout,graph)
-    graph = Liveness(DEF, KILLED, NKILL, AVAILin, AVAILout,graph)
     graph = AvailExpr(DEF, KILLED, NKILL, AVAILin, AVAILout,graph)
+    DEF, USE, NKILL, AVAILin, AVAILout = calculGeneralBackward(graph)
+    graph = Liveness(DEF, USE, NKILL, AVAILin, AVAILout,graph)
     return graph
 
 def RD(DEF, KILLED, NKILL, AVAILin, AVAILout,graph):
     """Propagation de constante"""
-    return
+    return graph
 
 def VBE(DEF, KILLED, NKILL, AVAILin, AVAILout,graph):
     """Code hoisting"""
-    return
+    return graph
 
-def Liveness(DEF, KILLED, NKILL, AVAILin, AVAILout,graph):
+def Liveness(DEF, USE, NKILL, AVAILin, AVAILout,graph):
     """Dead code elimination"""
-    return
+    return graph
 
 def AvailExpr(DEF, KILLED, NKILL, AVAILin, AVAILout,graph):
     """Elimination d’expression commune"""
-    return
+    return graph
 
 def optiGlobal(parser):
     """Optimise le code parsé"""
     graph = codeToCFG(parser)
     optiCFG(graph)   
     return CFGtoCode(graph)
+
+
+
+
+
+
+
+
+
