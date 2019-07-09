@@ -29,7 +29,7 @@ main(a,b,c){a = c; while(a < 1){a = a + 1; if(a > 4){b = b - 1;} c= a + 1;} a= a
 [[('affect', ('var', 'b'), ('opbin', ('var', 'b'), '-', ('nb', '1')))], [6]]
 
 
-[[('affect', ('var', 'c'), ('opbin', ('var', 'a'), '+', ('nb', '1')))], 2]
+[[('affect', ('var', 'c'), ('opbin', ('var', 'a'), '+', ('nb', '1')))], [2]]
 
 
 [[('affect', ('var', 'a'), ('opbin', ('var', 'a'), '+', ('nb', '3')))], [8]]
@@ -39,6 +39,8 @@ main(a,b,c){a = c; while(a < 1){a = a + 1; if(a > 4){b = b - 1;} c= a + 1;} a= a
 
 
 [[('var', 'a')], []]
+
+
 
 
 
