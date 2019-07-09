@@ -20,13 +20,13 @@ main(a,b,c){a = c; while(a < 1){a = a + 1; if(a > 4){b = b - 1;} c= a + 1;} a= a
 [['while', ('opbin', ('var', 'a'), 'lt', ('nb', '1'))], [3, 7]]
 
 
-[[('affect', ('var', 'a'), ('opbin', ('var', 'a'), '+', ('nb', '1')))], [4, 6]]
+[[('affect', ('var', 'a'), ('opbin', ('var', 'a'), '+', ('nb', '1')))], [4]]
 
 
 [['if', ('opbin', ('var', 'a'), 'gt', ('nb', '4'))], [5, 6]]
 
 
-[[('affect', ('var', 'b'), ('opbin', ('var', 'b'), '-', ('nb', '1')))], [4]]
+[[('affect', ('var', 'b'), ('opbin', ('var', 'b'), '-', ('nb', '1')))], [6]]
 
 
 [[('affect', ('var', 'c'), ('opbin', ('var', 'a'), '+', ('nb', '1')))], 2]
@@ -36,6 +36,9 @@ main(a,b,c){a = c; while(a < 1){a = a + 1; if(a > 4){b = b - 1;} c= a + 1;} a= a
 
 
 [[('affect', ('var', 'a'), ('opbin', ('var', 'b'), '+', ('nb', '2')))], [9]]
+
+
+[[('var', 'a')], []]
 
 
 
