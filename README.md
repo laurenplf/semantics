@@ -53,3 +53,23 @@ Transforme le graph de controle de flot en code
 - Avec CFG obtenu précédemment :
 - main(a,b,c){a = c; while(a < 1){a = a + 1; if(a > 4){b = b - 1; }c = a + 1; }a = a + 3; a = b + 2; return a;}
 
+## Ajout de calculGeneralBackward
+
+### Résultat
+
+- Avec le CFG obtenu : 
+- 
+DEF
+[[], ['a'], [], ['a'], [], ['b'], ['c'], ['a'], ['a'], []]
+
+
+USE
+[['a'], ['c'], ['a'], ['a'], ['a'], ['b'], ['a'], ['a'], ['b'], ['a']]
+
+
+IN
+[['a', 'b', 'c'], ['b', 'c'], ['a', 'b'], ['a', 'b'], ['a', 'b'], ['a', 'b'], ['a', 'b'], ['a', 'b'], ['b'], ['a'], ['a']]
+
+
+OUT
+[['b', 'c'], ['a', 'b'], ['a', 'b'], ['a', 'b'], ['a', 'b'], ['a', 'b'], ['a', 'b'], ['b'], ['a'], ['a'], []]
