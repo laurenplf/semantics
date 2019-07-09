@@ -265,7 +265,7 @@ def expr_dump(expr):
         return expr[1]
     elif (expr[0] == 'nb'):
         return expr[1]
-    return "pb"
+    return str(expr)
 
 #print(expr_dump(x))
     
@@ -470,7 +470,7 @@ def calculGenKilledNKilled(graph, bloc,AVAILin):
     return DEF, KILLED, NKILL
 
 def estOpbin(op):
-    if len(op)==2:
+    if len(op)==4:
         if op[0]=='opbin':
             return True
     return False
@@ -481,66 +481,65 @@ def estVar(v):
             return True
     return False 
 
-#print("\n")
-#DEF, KILLED, NKILL, AVAILin, AVAILout = calculGeneralForward(graph)
-#print(DEF)
-#print("\n")
-#print(KILLED)
-#print("\n")
-#print(NKILL)
-#print("\n")
-#print(AVAILin)
-#print("\n")
-#print(AVAILout)
 
 def calculGeneralBackward(graph):
     """"Calcul des ensembles définies précédemment pour tous les blocs du bas en haut"""
     n = len(graph)
     DEF = [[] for i in range(n)]
     USE = [[] for i in range(n)]
-    NKILL = [[] for i in range(n)]
     AVAILin = [[] for i in range(n+1)]
-    AVAILout = [[] for i in range(n)]
-    print(graph[n-1][1])
-    AVAILin[n] = graph[n-1][1]
-    for bloc in range(n-1,-1,-1):
-        AVAILout[bloc] = list(AVAILin[bloc+1])
-        for i in range(n-1, bloc, -1):
-            if  len(graph[bloc][1]) == 2:
-                AVAILout[bloc] = list(set(AVAILout[bloc] + AVAILout[graph[bloc][1][1]]))
-        
-        DEF[bloc], USE[bloc], NKILL[bloc] = calculGenKilledNKilledBackward(graph, bloc,AVAILout[bloc])
-        AVAILin[bloc] = list(set(USE[bloc] + NKILL[bloc]))
-    return DEF, USE, NKILL, AVAILin, AVAILout
+    AVAILout = [[] for i in range(n+1)]
+    AVAILin[n] = [expr_dump(graph[n-1][0][0])]
+    CopieIn = []
+    CopieOut =[]
+    while CopieIn != AVAILin and CopieOut != AVAILout :
+        CopieIn = list(AVAILin)
+        CopieOut = list(AVAILout)
+        for bloc in range(n-1,-1,-1):
+            AVAILout[bloc] = list(AVAILin[bloc+1])
+            for i in range(n-1, bloc, -1):
+                if  len(graph[bloc][1]) == 2 and bloc in graph[i][1]:
+                    AVAILout[bloc] = list(set(AVAILout[bloc] + AVAILout[graph[bloc][1][1]]))
+            DEF[bloc], USE[bloc] = calculGenKilledNKilledBackward(graph[bloc][0])
+            if not len(DEF[bloc]) == 0 :
+                NKILL = list(set(AVAILout[bloc])-set(DEF[bloc]))
+                AVAILin[bloc] = list(set(USE[bloc] + NKILL))
+            else : 
+                AVAILin[bloc] = list(set(USE[bloc] + AVAILout[bloc]))
+    return DEF, USE, AVAILin, AVAILout
 
-def calculGenKilledNKilledBackward(graph, bloc,AVAILout):
+def calculGenKilledNKilledBackward(instr):
     """Calcul des ensembles définies précédemment pour un bloc de bas en haut"""
-    DEF = []
-    KILLED =[]
     USE = []
-    n = len(graph[bloc][0])
-    i = n-1
-    instrL = graph[bloc][0]
-    if len(graph[bloc][1]) == 2:
-        i = i-2
-    while i >= 0 :
-        if estOpbin(instrL[i][2]):
-            y, z = instrL[i][2][1], instrL[i][2][3]
-            if (not y in KILLED) and (not z in KILLED):
-                DEF.append(instrL[i][2])
-        else :
-            if not instrL[i][2] in KILLED:
-                DEF.append(instrL[i][2])
-        KILLED.append(instrL[i][1])
-        i -=1
-    
-    NKILL = AVAILin
-    for e in NKILL:
-        for v in e:
-            if estVar(v):
-                if v in KILLED:
-                    NKILL.remove(e)
-    return DEF, KILLED, NKILL
+    DEF = []
+    if instr[0] == 'if' or instr[0] == 'while':
+        if estVar(instr[1][1]):
+            USE.append(expr_dump(instr[1][1]))
+        if estVar(instr[1][3]):
+            USE.append(expr_dump(instr[1][3]))
+    elif estVar(instr[0]):
+        USE.append(expr_dump(instr[0]))
+    else :
+        instr = instr[0]
+        DEF.append(expr_dump(instr[1]))
+        if estOpbin(instr[2]):
+            if estVar(instr[2][1]):
+                USE.append(expr_dump(instr[2][1]))
+            if estVar(instr[2][3]):
+                USE.append(expr_dump(instr[2][3]))
+        elif estVar(instr[2]):
+            USE.append(expr_dump(instr[2][1]))
+    return DEF, USE
+
+print("\n")
+DEF, USE, AVAILin, AVAILout = calculGeneralBackward(graph)
+print(DEF)
+print("\n")
+print(USE)
+print("\n")
+print(AVAILin)
+print("\n")
+print(AVAILout)
 
 # Ces ensembles sont ensuites nécessaires pour différents types d'optimisation
 # que j'ai listé si dessous
@@ -577,12 +576,6 @@ def optiGlobal(parser):
     graph = codeToCFG(parser)
     optiCFG(graph)   
     return CFGtoCode(graph)
-
-
-
-
-
-
 
 
 
